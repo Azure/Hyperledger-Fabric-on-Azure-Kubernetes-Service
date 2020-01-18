@@ -1,0 +1,48 @@
+{
+    "certificateAuthorities": {
+        "{orgCA}": {
+            "caName": "{ca}",
+            "tlsCACerts": {
+                "pem": "{tlsCACerts}"
+            },
+            "url": "{caUrl}"
+        }
+    },
+    "client": {
+        "connection": {
+            "timeout": {
+                "orderer": "300",
+                "peer": {
+                    "endorser": "300"
+                }
+            }
+        },
+        "organization": "{org}"
+    },
+    "name": "{org}",
+    "organizations": {
+        "{org}": {
+            "certificateAuthorities": [
+                "{orgCA}"
+            ],
+            "mspid": "{org1MSP}",
+            "{nodesType}": [
+                "{nodeName}"
+            ]
+        }
+    },
+    "{nodesType}": {
+        "{nodeName0}": {
+            "grpcOptions": {
+                "hostnameOverride": "{dns}",
+                "ssl-target-name-override": "{dns}"
+            },
+            "tlsCACerts": {
+                "pem": "{tlsCACerts}"
+            },
+            "url": "grpcs://localhost:18051"
+        }
+    },
+    "version": "1.0.0",
+    "wallet": "{org}"
+}

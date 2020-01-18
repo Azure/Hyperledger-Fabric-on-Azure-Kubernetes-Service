@@ -1,0 +1,8 @@
+{
+  "cert": "{hlf-admin-idcert}",
+  "msp_id": "Org1MSP",
+  "name": "org1Admin",
+  "private_key": "{hlf-admin-idkey}",
+  "tls_cert": "{hlf-admin-tls-idcert}",
+  "tls_private_key": "{hlf-admin-tls-idkey}"
+}

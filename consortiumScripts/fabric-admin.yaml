@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fabric-admin
+  labels:
+     name: fabric-admin
+spec:
+      restartPolicy: Never
+      volumes:
+      - name: cacerts
+        secret:
+          secretName: hlf-ca-idcert
+      - name: tls-cacerts
+        secret:
+          secretName: hlf-tlsca-idcert
+      - name: admincerts
+        secret:
+          secretName: hlf-admin-idcert
+      - name: keystore
+        secret:
+           secretName: hlf-admin-idkey
+      - name: signcerts
+        secret:
+           secretName: hlf-admin-idcert
+      - name: tls-key
+        secret:
+           secretName: hlf-admin-tls-idkey
+      - name: tls-cert
+        secret:
+           secretName: hlf-admin-tls-idcert
+      imagePullSecrets:
+        - name: fabric-tools-secrets
+      containers:
+      - name: fabric-admin
+        image: akvhlftemplate.azurecr.io/fabric-tools:1.0.0
+        stdin: true
+        tty: true
+        command: ["/bin/bash"]
+        volumeMounts:
+        - mountPath: /var/hyperledger/peer/msp/tlscacerts
+          name: tls-cacerts
+          readOnly: true
+        - mountPath: /var/hyperledger/peer/msp/admincerts
+          name: admincerts
+          readOnly: true
+        - mountPath: /var/hyperledger/peer/msp/cacerts
+          name: cacerts
+          readOnly: true
+        - mountPath: /var/hyperledger/peer/msp/keystore
+          name: keystore
+          readOnly: true
+        - mountPath: /var/hyperledger/peer/msp/signcerts
+          name: signcerts
+          readOnly: true
+        - mountPath: /var/hyperledger/peer/tls/key.pem
+          name: tls-key
+          readOnly: true
+          subPath: key.pem
+        - mountPath: /var/hyperledger/peer/tls/cert.pem
+          name: tls-cert
+          readOnly: true
+          subPath: cert.pem
+        env:
+        - name: HLF_ORG_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: org-detail
+              key: orgName
+        - name: HLF_DOMAIN_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: org-detail
+              key: domainName
+        - name: HLF_NODE_COUNT
+          valueFrom:
+            configMapKeyRef:
+              name: org-detail
+              key: nodeCount
+        - name: GOPATH
+          value: /var/hyperledger
+        - name: CORE_PEER_ID
+          value: cli
+        - name: CORE_PEER_TLS_ENABLED
+          value: "true"
+        - name: CORE_PEER_TLS_ROOTCERT_FILE
+          value: /var/hyperledger/peer/msp/tlscacerts/ca.crt
+        - name: CORE_PEER_TLS_CLIENTAUTHREQUIRED
+          value: "true"
+        - name: CORE_PEER_TLS_CLIENTCERT_FILE
+          value: /var/hyperledger/peer/tls/cert.pem
+        - name: CORE_PEER_TLS_CLIENTKEY_FILE
+          value: /var/hyperledger/peer/tls/key.pem
+        - name: CORE_PEER_TLS_CLIENTROOTCAS_FILES
+          value: /var/hyperledger/peer/msp/tlscacerts/ca.crt
+        - name: CORE_PEER_MSPCONFIGPATH
+          value: /var/hyperledger/peer/msp
+        workingDir: /var/hyperledger/consortiumScripts

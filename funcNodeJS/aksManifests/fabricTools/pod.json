@@ -1,0 +1,96 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "fabric-tools",
+    "labels": {
+      "app": "fabric-tools"
+    }
+  },
+  "spec": {
+    "restartPolicy": "Never",
+    "serviceAccountName": "admin-account",
+    "containers": [
+      {
+        "name": "fabric-tools",
+        "image": "akvhlftemplate.azurecr.io/fabric-tools:1.0.0",
+        "command": [
+          "/bin/bash"
+        ],
+        "args": [
+          "-c",
+          "/var/hyperledger/scripts/buildNetwork.sh"
+        ],
+        "env": [
+          {
+            "name": "HLF_STATIC_IP",
+            "value": ""
+          },
+          {
+            "name": "HLF_NODE_TYPE",
+            "value": "orderer"
+          },
+          {
+            "name": "HLF_NODE_COUNT",
+            "value": "5"
+          },
+          {
+            "name": "HLF_ORG_NAME",
+            "value": "org0"
+          },
+          {
+            "name": "HLF_BACKEND_DB",
+            "value": "couchDB"
+          },
+          {
+            "name": "HLF_DOMAIN_NAME",
+            "value": ""
+          },
+          {
+            "name":  "FABRIC_CA_BOOTSTRAP_USERNAME",
+            "valueFrom": {
+              "secretKeyRef" : {
+                "name": "ca-credentials",
+                "key": "ca-admin-user"
+              }
+            }
+          },
+          {
+            "name":  "FABRIC_CA_BOOTSTRAP_PASSWORD",
+            "valueFrom": {
+              "secretKeyRef" : {
+                "name": "ca-credentials",
+                "key": "ca-admin-password"
+              }
+            }
+          },
+          {
+            "name":  "FABRIC_CA_SERVER_DB_TYPE",
+            "valueFrom": {
+              "secretKeyRef" : {
+                "name": "ca-server-db",
+                "key": "db-type"
+              }
+            }
+          },
+          {
+            "name":  "FABRIC_CA_SERVER_DB_DATASOURCE",
+            "valueFrom": {
+              "secretKeyRef" : {
+                "name": "ca-server-db",
+                "key": "datasource"
+              }
+            }
+          }
+        ],
+        "workingDir": "/var/hyperledger"
+      }
+    ],
+    "imagePullPolicy": "Always",
+    "imagePullSecrets": [
+      {
+        "name": "fabric-tools-secrets"
+      }
+    ]
+  }
+}

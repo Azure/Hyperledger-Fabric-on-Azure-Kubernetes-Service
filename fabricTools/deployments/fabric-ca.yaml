@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+   name: ca
+spec:
+ selector:
+   name: ca
+ ports:
+   - name: endpoint
+     protocol: TCP
+     port: 7054
+     targetPort: 7054
+--- 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ca
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+       name: ca
+  template:
+    metadata:
+      labels:
+       name: ca
+    spec:
+     imagePullSecrets:
+     - name: fabric-tools-secrets
+     volumes:
+     - name: hlf-ca-idcert
+       secret:
+          secretName: hlf-ca-idcert
+     - name: hlf-ca-idkey
+       secret:
+          secretName: hlf-ca-idkey
+     - name: fabric-ca-server-config
+       secret:
+          secretName: fabric-ca-server-config
+     containers:
+       - name: ca
+         image: akvhlftemplate.azurecr.io/hyperledger/fabric-ca:1.4.4
+         imagePullPolicy: Always
+         env: 
+         - name:  FABRIC_CA_HOME
+           value: /etc/hyperledger/fabric-ca-server
+         ports:
+          - containerPort: 7054
+         command: ["/bin/bash"]
+         args:  ["-c", "rm -rf $FABRIC_CA_HOME;fabric-ca-server start --port 7054"]
+         volumeMounts:
+           - mountPath: /etc/hyperledger/fabric-ca-server-config/rca.pem
+             name: hlf-ca-idcert
+             subPath: rca.pem
+             readOnly: true
+           - mountPath: /etc/hyperledger/fabric-ca-server-config/rca.key
+             name: hlf-ca-idkey
+             subPath: rca.key
+             readOnly: true
+           - mountPath: /etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
+             name: fabric-ca-server-config
+             subPath: fabric-ca-server-config.yaml
+             readOnly: true

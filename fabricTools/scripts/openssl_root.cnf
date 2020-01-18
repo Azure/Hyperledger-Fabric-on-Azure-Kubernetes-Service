@@ -1,0 +1,50 @@
+[ ca ]
+# `man ca`
+default_ca = CA_default
+
+[ CA_default ]
+ca                      = ca                   # CA name
+dir                     = /tmp/rca                     # Top dir
+name_opt                = ca_default # Display UTF-8 characters
+new_certs_dir           = $dir/newcerts
+database                = $dir/index.txt
+serial                  = $dir/serial
+policy                  = policy_strict
+default_md              = sha256
+
+[ policy_strict ]
+# The root CA should only sign intermediate certificates that match.
+# See the POLICY FORMAT section of `man ca`.
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ req ]
+distinguished_name  = subject
+string_mask         = utf8only
+
+[ subject ]
+countryName                 = Country Name (2 letter code)
+countryName_default         = US
+stateOrProvinceName         = State or Province Name (full name)
+stateOrProvinceName_default = WA
+localityName                = Locality Name (eg, city)
+localityName_default        = Redmond
+organizationName            = Organization Name (eg, company)
+organizationName_default    = MSFT
+commonName                  = Common Name (e.g. server FQDN or YOUR name)
+commonName_default          = prime256v1.keyusage.contoso.com
+emailAddress                = Email Address
+emailAddress_default        = prime256v1.keyusage@contoso.com
+
+[ v3_ca ]
+# Extensions for a typical CA (`man x509v3_config`).
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+basicConstraints = critical, CA:true
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+nsComment               = "OpenSSL Generated Certificate"

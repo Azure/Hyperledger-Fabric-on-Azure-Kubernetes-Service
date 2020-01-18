@@ -1,0 +1,606 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "resourceTypes": ["Microsoft.ContainerService/managedClusters", "Microsoft.DBforPostgreSQL/servers"],
+    "basics": [
+      {
+        "name": "resourcePrefix",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Resource prefix",
+        "toolTip": "Prefix for naming of resources that will be deployed. This should be less than 6 characters in length, including lower case alpha and numbers only.",
+        "defaultValue": "",
+        "constraints": {
+            "required": true,
+            "regex": "^[a-z]{1}[a-z0-9]{0,5}$",
+            "validationMessage": "Resource prefix should be less than 6 characters in length, including lower case alphabets and numbers only. Prefix cannot start with a number."
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "hlfConfig",
+        "bladeTitle": "HLF Settings",
+        "label": "Fabric settings",
+        "elements": [
+          {
+            "name": "hlfOrgName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Organization name",
+            "toolTip": "Please enter the name of the Hyperledger Fabric organization",
+            "visible": true,
+            "constraints": {
+              "regex": "^[a-z0-9A-Z]{1,32}$",
+              "required": true,
+              "validationMessage": "Only alphanumeric characters are allowed, and the value must be 1-32 characters long."
+            }
+          },
+          {
+            "name": "hlfMemberType",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Fabric network component",
+            "toolTip": "Please select the Hyperledger Fabric network component",
+            "visible": true,
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Ordering service",
+                  "value": "orderer"
+                },
+                {
+                  "label": "Peer nodes",
+                  "value": "peer"
+                }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "hlfOrdererNodesNumber",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Number of nodes",
+            "toolTip": "Please select the number of nodes",
+            "visible": "[equals(steps('hlfConfig').hlfMemberType, 'orderer')]",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "3",
+                  "value": 3
+                },
+                {
+                  "label": "5",
+                  "value": 5
+                },
+                {
+                  "label": "7",
+                  "value": 7
+                }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "hlfPeerNodesNumber",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Number of nodes",
+            "toolTip": "Please select the number of nodes",
+            "visible": "[equals(steps('hlfConfig').hlfMemberType, 'peer')]",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "1",
+                  "value": 1
+                },
+                {
+                  "label": "2",
+                  "value": 2
+                },
+                {
+                  "label": "3",
+                  "value": 3
+                },
+                {
+                  "label": "4",
+                  "value": 4
+                },
+                {
+                  "label": "5",
+                  "value": 5
+                },
+                {
+                  "label": "6",
+                  "value": 6
+                },
+                {
+                  "label": "7",
+                  "value": 7
+                },
+                {
+                  "label": "8",
+                  "value": 8
+                },
+                {
+                  "label": "9",
+                  "value": 9
+                },
+                {
+                  "label": "10",
+                  "value": 10
+                }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "hlfBackendDB",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Peer node world state database",
+            "toolTip": "Please select the database for peer nodes",
+            "visible": "[equals(steps('hlfConfig').hlfMemberType, 'peer')]",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "CouchDB",
+                  "value": "couchDB"
+                },
+                {
+                  "label": "LevelDB",
+                  "value": "levelDB"
+                }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "hlfUserName",
+            "type": "Microsoft.Common.TextBox",
+            "toolTip": "Please enter username",
+            "label": "Fabric CA username",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-z0-9A-Z]{1,30}$",
+              "validationMessage": "Only alphanumeric characters are allowed, and the value must be 1-30 characters long."
+            }
+          },
+          {
+            "name": "hlfCaPswd",
+            "type": "Microsoft.Common.PasswordBox",
+            "label": {
+              "password": "Fabric CA password",
+              "confirmPassword": "Confirm password"
+            },
+            "toolTip": "Please enter password",
+            "constraints": {
+              "required": true,
+              "regex": "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[$~$&*+=;!.,-])[A-Za-z\\d$~$&*+=;!.,-]{12,64}$",
+              "validationMessage": "The password must be min 12 chars length, must contain characters from three of the following categories – English uppercase letters, English lowercase letters, numbers (0-9), and non-alphanumeric characters ~$&*+=;!.,-"
+            },
+            "options": {
+              "hideConfirmation": false
+            },
+            "visible": true
+          },
+          {
+						"name": "hlfCaRootCertificates",
+						"type": "Microsoft.Common.OptionsGroup",
+						"label": "Certificates",
+						"defaultValue": "Fabric CA self-signed certificates",
+						"toolTip": "You can choose to provide your own root certificate or let the system generate self-signed certificates to initialize the Fabric CA (default)",
+						"constraints": {
+							"allowedValues": [
+								{
+									"label": "Fabric CA self-signed certificates",
+									"value": "SelfSigned"
+								},
+								{
+									"label": "Upload root certificate for Fabric CA",
+									"value": "Custom"
+								}
+							],
+							"required": false
+						},
+						"visible": true
+					},
+            {
+              "name": "hlfCaRootCertPublicKey",
+              "type": "Microsoft.Common.FileUpload",
+              "label": "Root Certificate",
+              "toolTip": "Upload root certificate(public key) with which Fabric CA needs to be initialized. Certificates of .pem format are supported ",
+              "constraints": {
+                  "required": true,
+                  "accept": ".pem"
+              },
+              "options": {
+                  "multiple": false,
+                  "uploadMode": "file",
+                  "openMode": "binary",
+                  "encoding": "UTF-8"
+              },
+              "visible": "[equals(steps('hlfConfig').hlfCaRootCertificates, 'Custom')]"
+          },
+          {
+              "name": "hlfCaRootCertPrivateKey",
+              "type": "Microsoft.Common.FileUpload",
+              "label": "Root Certificate private key",
+              "toolTip": "Upload the private key of the root certificate. If you have a .pem certificate which has both public and private key combined, upload it here as well",
+              "constraints": {
+                  "required": true,
+                  "accept": ".pem"
+              },
+              "options": {
+                  "multiple": false,
+                  "uploadMode": "file",
+                  "openMode": "binary",
+                  "encoding": "UTF-8"
+              },
+              "visible": "[equals(steps('hlfConfig').hlfCaRootCertificates, 'Custom')]"
+          }
+        ]
+      },
+      {
+        "name": "kubernetesConfig",
+        "bladeTitle": "AKS cluster settings",
+        "label": "AKS cluster settings",
+        "elements": [
+          {
+            "name": "clusterDetails",
+            "type": "Microsoft.Common.Section",
+            "label": "Primary node pool",
+            "elements": [
+              {
+                "name": "clusterName",
+                "defaultValue": "[concat(basics('resourcePrefix'), '-HLF-AKS')]",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Kubernetes cluster name",
+                "toolTip": "Name of the AKS cluster resource based on the resource prefix input. You can change the name if required.",
+                "constraints": {
+                  "required": true,
+                  "regex": "^[A-Za-z0-9-]{1,49}$",
+                  "validationMessage": "The name can contain only letters, numbers, and hyphens. The name must start and end with letter or number."
+                }
+              },
+              {
+                "name": "kubernetesVersion",
+                "toolTip": "The version of Kubernetes that should be used for this cluster. You will be able to upgrade this version after creating the cluster.",
+                "type": "Microsoft.Common.DropDown",
+                "label": "Kubernetes version",
+                "defaultValue": "default",
+                "constraints": {
+                  "allowedValues": [
+                    {
+                      "label": "default",
+                      "value": ""
+                    },
+                    {
+                      "label": "1.15.5",
+                      "value": "1.15.5"
+                    },
+                    {
+                      "label": "1.14.8",
+                      "value": "1.14.8"
+                    },
+                    {
+                      "label": "1.13.12",
+                      "value": "1.13.12"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "dnsPrefix",
+                "toolTip": "DNS name prefix to use with the hosted Kubernetes API server FQDN. You will use this to connect to the Kubernetes API when managing containers after creating the cluster.",
+                "type": "Microsoft.Common.TextBox",
+                "defaultValue": "[concat(steps('kubernetesConfig').clusterDetails.clusterName, '-dns')]",
+                "label": "DNS prefix",
+                "constraints": {
+                  "required": true,
+                  "regex": "^[\\w][\\w\u002d\\w]+[\\w]{1,42}$",
+                  "validationMessage": "The DNS name can contain only letters, numbers, and hyphens. The name must start and end with a letter or a number. Length must be less than 43 characters."
+                }
+              },
+              {
+                "name": "agentVMSize",
+                "type": "Microsoft.Compute.SizeSelector",
+                "label": "Node size",
+                "toolTip": "The size of the virtual machines that will form the nodes in the cluster. This cannot be changed after creating the cluster.",
+                "recommendedSizes": [
+                  "Standard_DS2_v2",
+                  "Standard_D2",
+                  "Standard_D3"
+                ],
+                "constraints": {
+                  "allowedSizes": [],
+                  "excludedSizes": []
+                },
+                "options": {
+                  "hideDiskTypeFilter": false
+                },
+                "osPlatform": "Linux",
+                "count": "[steps('kubernetesConfig').clusterDetails.agentCount]",
+                "visible": true
+              },
+              {
+                "name": "agentCount",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Node count",
+                "defaultValue": "3",
+                "toolTip": "The number of nodes that should be created along with the cluster. You will be able to resize the cluster later.",
+                "constraints": {
+                  "required": true,
+                  "regex": "^[^0a-zA-Z\\s][\\d]{0,1}$",
+                  "validationMessage": "The Node count must be digit from 1 to 100."
+                }
+              }
+            ],
+            "visible": true
+          },
+          {
+            "name": "kubeNetworking",
+            "type": "Microsoft.Common.Section",
+            "label": "Networking",
+            "visible": true,
+            "elements": [
+              {
+                "name": "publicIP",
+                "type": "Microsoft.Common.OptionsGroup",
+                "label": "Enable public IP",
+                "defaultValue": "Yes",
+                "toolTip": "Flag used to create the HTTP application routing solution in AKS, which makes it easy to access applications that are deployed to your cluster by creating publicly accessible DNS names for application endpoints. <a href='https://go.microsoft.com/fwlink/?linkid=2032149' title='Title'>Learn more about HTTP application routing</a></p>",
+                "constraints": {
+                  "allowedValues": [
+                    {
+                      "label": "Yes",
+                      "value": true
+                    },
+                    {
+                      "label": "No",
+                      "value": false
+                    }
+                  ],
+                  "required": true
+                },
+                "visible": false
+              },
+              {
+                "name": "vNetTrigger",
+                "type": "Microsoft.Common.OptionsGroup",
+                "label": "Network configuration",
+                "defaultValue": "Basic",
+                "toolTip": "Choose between a basic network configuration using kubenet with a default VNet, or an advanced configuration using Azure CNI with the option to customize your VNet.",
+                "constraints": {
+                  "allowedValues": [
+                  {
+                    "label": "Advanced",
+                    "value": "Advanced"
+                  },
+                  {
+                    "label": "Basic",
+                    "value": "Basic"
+                  }
+                  ],
+                  "required": false
+                },
+                "visible": true
+              },
+              {
+                "name": "warningInfo",
+                "type": "Microsoft.Common.InfoBox",
+                "visible": "[equals(steps('kubernetesConfig').kubeNetworking.vNetTrigger, 'Advanced')]",
+                "options": {
+                  "icon": "Warning",
+                  "text": "For creating Advanced Network Configuration, you must be either User Access Administrator or Owner of the subscription"
+                }
+              },
+              {
+                "name": "virtualNetworkName",
+                "type": "Microsoft.Network.VirtualNetworkCombo",
+                "toolTip": {
+                  "subnets": "The subnet into which both the nodes and containers in the cluster will be placed"
+                },
+                "label": {
+                  "virtualNetwork": "Virtual Network",
+                  "subnets": "Subnets"
+                },
+                "defaultValue": {
+                  "name": "[concat(basics('resourcePrefix'), '-HLF-AKS-vnet')]",
+                  "addressPrefixSize": "/16",
+                  "requireContiguousAddresses": true
+                },
+                "constraints": {
+                  "minAddressPrefixSize": "/16"
+                },
+                "options": {
+                  "hideExisting": false
+                },
+                "subnets": {
+                  "subnet1": {
+                    "label": "Cluster subnet",
+                    "defaultValue": {
+                      "name": "hlf-subnet",
+                      "addressPrefixSize": "/24",
+                      "requireContiguousAddresses": true
+                    },
+                    "constraints": {
+                      "minAddressPrefixSize": "/24"
+                    }
+                  }
+                },
+                "visible": "[equals(steps('kubernetesConfig').kubeNetworking.vNetTrigger, 'Advanced')]"
+              },
+              {
+                "name": "kuberServiceAddressRange",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Kubernetes service address range",
+                "toolTip": "A CIDR notation IP range from which to assign service cluster IPs. It must not overlap with any Subnet IP ranges. For example: 172.35.0.0/16.",
+                "defaultValue": "172.35.0.0/16",
+                "constraints": {
+                  "required": true,
+                  "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+                  "validationMessage": "Invalid IP address range, must not overlap with any Subnet IP ranges. For example: 172.35.0.0/16"
+                },
+                "visible": "[equals(steps('kubernetesConfig').kubeNetworking.vNetTrigger, 'Advanced')]"
+              },
+              {
+                "name": "kuberDNSsvcIPaddress",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Kubernetes DNS service IP address",
+                "toolTip": "An IP address assigned to the Kubernetes DNS service. It must be within the Kubernetes service address range. For example: 172.35.0.10.",
+                "defaultValue": "172.35.0.10",
+                "constraints": {
+                  "required": true,
+                  "regex": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+                  "validationMessage": "Invalid IP address, must be within the Kubernetes service address range. For example: 172.35.0.10"
+                },
+                "visible": "[equals(steps('kubernetesConfig').kubeNetworking.vNetTrigger, 'Advanced')]"
+              },
+              {
+                "name": "dockerBridgeAddress",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Docker bridge address",
+                "toolTip": "An IP address and netmask assigned to Docker Bridge. It must not be in any Subnet IP ranges, or the Kubernetes service address range. For example: 172.17.0.1/16.",
+                "defaultValue": "172.17.0.1/16",
+                "constraints": {
+                  "required": true,
+                  "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}(\\/([0-9]|[1-2][0-9]|3[0-2]))?$",
+                  "validationMessage": "Invalid docker bridge address, must not be in any Subnet IP ranges, or the Kubernetes service address range. For example: 172.17.0.1/16"
+                },
+                "visible": "[equals(steps('kubernetesConfig').kubeNetworking.vNetTrigger, 'Advanced')]"
+              }
+            ]
+          },
+          {
+            "name": "servicePrincipal",
+            "type": "Microsoft.Common.Section",
+            "label": "Authentication",
+            "elements": [
+              {
+                "name": "servicePrincipalInfo",
+                "type": "Microsoft.Common.InfoBox",
+                "visible": true,
+                "options": {
+                  "icon": "Info",
+                  "text": "<p>To manually create a service principal with the Azure CLI follow the documentation <a href='https://docs.microsoft.com/en-us/azure/aks/kubernetes-service-principal#manually-create-a-service-principal' title='Title'>here</a></p>"}
+              },
+              {
+                "name": "servicePrincipalClientId",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Service principal client ID",
+                "toolTip": "The client ID of an existing service principal.",
+                "visible": true,
+                "constraints": {
+                  "required": true,
+                  "regex": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                  "validationMessage": "Service principal client ID must be GUID."
+                }
+              },
+              {
+                "name": "servicePrincipalClientSecret",
+                "type": "Microsoft.Common.PasswordBox",
+                "label": {
+                  "password": "Service principal client secret",
+                  "confirmPassword": "Confirm client secret"
+                },
+                "toolTip": "The client secret of an existing service principal.",
+                "constraints": {
+                  "required": true,
+                  "regex": ""
+                },
+                "options": {
+                  "hideConfirmation": false
+                },
+                "visible": true
+              },
+              {
+                "name": "servicePrincipalObjectId",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Service principal object ID",
+                "toolTip": "The object ID of an existing service principal.",
+                "visible": "[equals(steps('kubernetesConfig').kubeNetworking.vNetTrigger, 'Advanced')]",
+                "constraints": {
+                  "required": true
+                }
+              }
+            ],
+            "visible": true
+          },
+          {
+            "name": "monitoring",
+            "type": "Microsoft.Common.Section",
+            "label": "Azure Monitor",
+            "elements": [
+              {
+                "name": "monitoringTrigger",
+                "type": "Microsoft.Common.OptionsGroup",
+                "label": "Enable container monitoring",
+                "defaultValue": "Yes",
+                "toolTip": "You can enable container monitoring capabilities and get insights into the performance and health of your entire Kubernetes cluster",
+                "constraints": {
+                  "allowedValues": [
+                    {
+                      "label": "Yes",
+                      "value": true
+                    },
+                    {
+                      "label": "No",
+                      "value": false
+                    }
+                  ],
+                  "required": false
+                },
+                "visible": true
+              },
+              {
+                "name": "logAnalyticsWorkspace",
+                "type": "Microsoft.Common.TextBox",
+                "defaultValue": "[substring(replace(utcNow(), ':', '-'), 0, 19)]",
+                "label": "Log Analytics workspace",
+                "toolTip": "Select a Log Analytics workspace to store monitoring data",
+                "visible": "[equals(steps('kubernetesConfig').monitoring.monitoringTrigger, true)]",
+                "constraints": {
+                  "required": true,
+                  "regex": "^[^-][\\d\\w-]{3,58}[^-]$",
+                  "validationMessage": "The workspace name can contain only letters, numbers and '-'. The '-' shouldn't be the first or the last character. Workspace name must be between 4 and 59 characters."
+                }
+              }
+            ],
+            "visible": true
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "resourcePrefix": "[basics('resourcePrefix')]",
+      "hlfOrgName": "[steps('hlfConfig').hlfOrgName]",
+      "hlfOrdererNodesNumber": "[steps('hlfConfig').hlfOrdererNodesNumber]",
+      "hlfPeerNodesNumber": "[steps('hlfConfig').hlfPeerNodesNumber]",
+      "hlfMemberType": "[steps('hlfConfig').hlfMemberType]",
+      "hlfBackendDbType": "[steps('hlfConfig').hlfBackendDB]",
+      "hlfUserName": "[steps('hlfConfig').hlfUserName]",
+      "hlfCaPswd": "[steps('hlfConfig').hlfCaPswd]",
+      "hlfCaRootCertPublicKey": "[steps('hlfConfig').hlfCaRootCertPublicKey.output]",
+			"hlfCaRootCertPrivateKey": "[steps('hlfConfig').hlfCaRootCertPrivateKey.output]",
+      "enableHttpApplicationRouting": "[steps('kubernetesConfig').kubeNetworking.publicIP]",
+      "clusterName": "[steps('kubernetesConfig').clusterDetails.clusterName]",
+      "kubernetesVersion": "[steps('kubernetesConfig').clusterDetails.kubernetesVersion]",
+      "dnsPrefix": "[steps('kubernetesConfig').clusterDetails.dnsPrefix]",
+      "agentVMSize": "[steps('kubernetesConfig').clusterDetails.agentVMSize]",
+      "agentCount": "[int(steps('kubernetesConfig').clusterDetails.agentCount)]",
+      "servicePrincipalClientId": "[steps('kubernetesConfig').servicePrincipal.servicePrincipalClientId]",
+      "servicePrincipalClientSecret": "[steps('kubernetesConfig').servicePrincipal.servicePrincipalClientSecret]",
+      "servicePrincipalObjectId": "[steps('kubernetesConfig').servicePrincipal.servicePrincipalObjectId]",
+      "vNetTrigger": "[steps('kubernetesConfig').kubeNetworking.vNetTrigger]",
+      "vNetName": "[steps('kubernetesConfig').kubeNetworking.virtualNetworkName.name]",
+      "clusterSubNetName": "[steps('kubernetesConfig').kubeNetworking.virtualNetworkName.subnets.subnet1.name]",
+      "clusterSubNetAddressPrefSize": "[steps('kubernetesConfig').kubeNetworking.virtualNetworkName.subnets.subnet1.addressPrefix]",
+      "advancedVnetNewOrExist": "[steps('kubernetesConfig').kubeNetworking.virtualNetworkName.newOrExisting]",
+      "advancedVnetResourceGroup": "[steps('kubernetesConfig').kubeNetworking.virtualNetworkName.resourceGroup]",
+      "serviceCidr": "[steps('kubernetesConfig').kubeNetworking.kuberServiceAddressRange]",
+      "dnsServiceIP": "[steps('kubernetesConfig').kubeNetworking.kuberDNSsvcIPaddress]",
+      "dockerBridgeCidr": "[steps('kubernetesConfig').kubeNetworking.dockerBridgeAddress]",
+      "enableOmsAgent": "[steps('kubernetesConfig').monitoring.monitoringTrigger]",
+      "workspaceName": "[steps('kubernetesConfig').monitoring.logAnalyticsWorkspace]",
+      "location": "[location()]"
+    }
+  }
+}

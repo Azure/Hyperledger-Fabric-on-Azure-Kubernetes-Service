@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-ingress
+    component: "controller"
+  name: nginx-ingress-controller
+spec:
+  selector:
+    matchLabels:
+      app: nginx-ingress
+  replicas: 1
+  revisionHistoryLimit: 10
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        app: nginx-ingress
+        component: "controller"
+    spec:
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: fabric-tools-secrets
+      containers:
+        - name: nginx-ingress-controller
+          image: "akvhlftemplate.azurecr.io/nginx/nginx-ingress-controller:0.26.1"
+          args:
+            - /nginx-ingress-controller
+            - --default-backend-service={namespace}/nginx-ingress-default-backend
+            - --election-id=ingress-controller-leader
+            - --ingress-class=nginx
+            - --configmap={namespace}/nginx-ingress-controller
+            - --enable-ssl-passthrough
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
+            runAsUser: 33
+            allowPrivilegeEscalation: true
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          resources: {}
+
+      hostNetwork: false
+      serviceAccountName: nginx-ingress
+      terminationGracePeriodSeconds: 60

@@ -1,0 +1,90 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "metadata": {
+              "description": "The location of the Managed Cluster resource."
+            }
+        },
+        "publicIPAddressName": {
+            "type": "string",
+            "metadata": {
+                "description": "the name of the ip address resource"
+            },
+            "defaultValue": ""
+       },
+       "dnsZoneName": {
+            "type": "string",
+            "metadata": {
+                "description": "dns zone resource name"
+            },
+            "defaultValue": ""
+        },
+        "aRecordNamePrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "record name prefix 'orderer' or 'peer'"
+            },
+            "defaultValue": ""
+        },
+        "dnsRecordsCount": {
+            "type": "int",
+            "metadata": {
+                "description": "the count of dns records"
+            },
+            "defaultValue": ""
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2019-04-01",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[parameters('publicIPAddressName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Basic"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "static"
+            }
+          },
+          {
+            "type": "Microsoft.Network/dnszones/A",
+            "copy": {
+                "name": "hlfARecords",
+                "count": "[parameters('dnsRecordsCount')]"
+            },
+            "apiVersion": "2018-05-01",
+            "name": "[concat(parameters('dnsZoneName'), '/', parameters('aRecordNamePrefix'), copyIndex(1))]",
+            "properties": {
+                "TTL": 3600,
+                "ARecords": [
+                    {
+                        "ipv4Address": "[reference(resourceId('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName')), '2019-04-01').ipAddress]"
+                    }
+                ]
+            }
+        },
+        {
+          "type": "Microsoft.Network/dnszones/A",
+          "apiVersion": "2018-05-01",
+          "name": "[concat(parameters('dnsZoneName'), '/ca')]",
+          "properties": {
+              "TTL": 3600,
+              "ARecords": [
+                  {
+                      "ipv4Address": "[reference(resourceId('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName')), '2019-04-01').ipAddress]"
+                  }
+              ]
+          }
+        }
+    ],
+    "outputs": {
+        "publicIpAddress": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddressName')), '2019-04-01').ipAddress]"
+          }
+    }
+}

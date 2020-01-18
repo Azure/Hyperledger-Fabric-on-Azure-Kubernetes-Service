@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: Service
+metadata:
+   name: peer{nodeNum}
+spec:
+ selector:
+   name: peer{nodeNum}
+ ports:
+   - name: external-listen-endpoint
+     protocol: TCP
+     port: 7051
+     targetPort: 7051
+   - name: chaincode-listen
+     protocol: TCP
+     port: 7052
+     targetPort: 7052
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peer{nodeNum}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: peer{nodeNum}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "8443"
+        prometheus.io/scrape: "true"
+      labels:
+        name: peer{nodeNum}
+    spec:
+      imagePullSecrets:
+      - name: fabric-tools-secrets
+      containers:
+      - name: couchdb{nodeNum}
+        image: akvhlftemplate.azurecr.io/hyperledger/fabric-couchdb:0.4.18
+        ports:
+         - containerPort: 5984  
+        volumeMounts:
+         - mountPath: /opt/couchdb/data/
+           name: fabric-storage
+           subPath: peer{nodeNum}-couchdb
+      - name: peer{nodeNum}
+        image: akvhlftemplate.azurecr.io/hyperledger/fabric-peer:1.4.4
+        env:
+        - name: CORE_LEDGER_STATE_STATEDATABASE
+          value: "CouchDB"
+        - name: CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS
+          value: "localhost:5984"
+        - name: CORE_VM_ENDPOINT
+          value: "unix:///host/var/run/docker.sock"
+        - name: CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE
+          value: "bridge"
+        - name: FABRIC_LOGGING_SPEC 
+          value: "info"
+        - name: CORE_VM_DOCKER_ATTACHSTDOUT
+          value: "true"
+        - name: CORE_PEER_TLS_ENABLED
+          value: "true"
+        - name: CORE_PEER_GOSSIP_USELEADERELECTION
+          value: "true"
+        - name: CORE_PEER_GOSSIP_ORGLEADER
+          value: "false" 
+        - name: CORE_PEER_PROFILE_ENABLED
+          value: "true"
+        - name: CORE_PEER_MSPCONFIGPATH
+          value: "/var/hyperledger/peer/msp"
+        - name: CORE_PEER_TLS_CERT_FILE
+          value: "/var/hyperledger/peer/tls/server.crt" 
+        - name: CORE_PEER_TLS_KEY_FILE
+          value: "/var/hyperledger/peer/tls/server.key"
+        - name: CORE_PEER_TLS_ROOTCERT_FILE
+          value: "/var/hyperledger/peer/tls/ca.crt"
+        - name: CORE_PEER_TLS_CLIENTAUTHREQUIRED
+          value: "true"
+        - name: CORE_PEER_TLS_CLIENTCERT_FILE
+          value: "/var/hyperledger/peer/tls/server.crt"
+        - name: CORE_PEER_TLS_CLIENTKEY_FILE
+          value: "/var/hyperledger/peer/tls/server.key"
+        - name: CORE_PEER_TLS_CLIENTROOTCAS_FILES
+          value: "/var/hyperledger/peer/tls/ca.crt"
+        - name: CORE_PEER_ID
+          value: peer{nodeNum}
+        - name: CORE_PEER_ADDRESS
+          value: peer{nodeNum}:7051
+        - name: CORE_PEER_LISTENADDRESS
+          value: 0.0.0.0:7051
+        - name: CORE_PEER_GOSSIP_EXTERNALENDPOINT
+          value: peer{nodeNum}.{domainName}:443
+        - name: CORE_PEER_ADDRESSAUTODETECT
+          value: "true"
+        - name: CORE_PEER_CHAINCODELISTENADDRESS
+          value: 0.0.0.0:7052
+        - name: CORE_PEER_LOCALMSPID
+          value: {orgName}
+        - name: CORE_OPERATIONS_LISTENADDRESS
+          value: :8443
+        - name: CORE_METRICS_PROVIDER
+          value: prometheus
+        workingDir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+        ports:
+         - containerPort: 7051
+         - containerPort: 7052
+        command: ["peer"]
+        args: ["node","start"]
+        volumeMounts:
+         - mountPath: /var/hyperledger/production/
+           name: fabric-storage
+           subPath: peer{nodeNum}
+         - mountPath: /var/hyperledger/peer/msp/admincerts
+           name: admincerts
+           readOnly: true
+         - mountPath: /var/hyperledger/peer/msp/cacerts
+           name: cacerts
+           readOnly: true
+         - mountPath: /var/hyperledger/peer/msp/keystore
+           name: keystore
+           readOnly: true
+         - mountPath: /var/hyperledger/peer/msp/signcerts
+           name: signcerts
+           readOnly: true
+         - mountPath: /var/hyperledger/peer/tls/server.key
+           name: tls-keystore
+           subPath: server.key
+           readOnly: true
+         - mountPath: /var/hyperledger/peer/tls/server.crt
+           name: tls-signcerts
+           subPath: server.crt
+           readOnly: true
+         - mountPath: /var/hyperledger/peer/tls/ca.crt
+           name: tls-cacerts
+           subPath: ca.crt
+           readOnly: true
+         - mountPath: /host/var/run/
+           name: run
+      volumes:
+        - name: run
+          hostPath:
+            path: /run
+        - name: fabric-storage
+          persistentVolumeClaim:
+             claimName: azure-managed-disk-{nodeNum}
+        - name: admincerts
+          secret:
+             secretName: hlf-admin-idcert
+        - name: signcerts
+          secret:
+             secretName: hlfpeer{nodeNum}-idcert
+        - name: keystore
+          secret:
+             secretName: hlfpeer{nodeNum}-idkey
+        - name: cacerts
+          secret:
+             secretName: hlf-ca-idcert
+        - name: tls-cacerts
+          secret:
+             secretName: hlf-tlsca-idcert
+        - name: tls-keystore
+          secret:
+             secretName: hlfpeer{nodeNum}-tls-idkey
+        - name: tls-signcerts
+          secret:
+            secretName: hlfpeer{nodeNum}-tls-idcert

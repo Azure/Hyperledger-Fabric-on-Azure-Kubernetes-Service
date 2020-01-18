@@ -1,0 +1,919 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Resource Group location"
+      }
+    },
+    "resourcePrefix": {
+      "type": "string",
+      "maxLength": 6,
+      "metadata": {
+        "description": "The prefix of HLF resource."
+      }
+    },
+    "hlfOrgName": {
+      "type": "string",
+      "maxLength": 32,
+      "metadata": {
+        "description": "The name of organization for HLF."
+      }
+    },
+    "hlfOrdererNodesNumber": {
+      "type": "int",
+      "defaultValue": 3,
+      "metadata": {
+        "description": "The number of orderer nodes for HLF."
+      }
+    },
+    "hlfPeerNodesNumber": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "The number of peer nodes for HLF."
+      }
+    },
+    "hlfMemberType": {
+      "type": "string",
+      "defaultValue": "empty",
+      "metadata": {
+        "description": "The member type for HLF."
+      }
+    },
+    "hlfBackendDbType": {
+      "defaultValue": "couchDB",
+      "type": "string",
+      "metadata": {
+        "description": "The DB type for HLF."
+      }
+    },
+    "clusterName": {
+      "type": "string",
+      "maxLength": 49,
+      "metadata": {
+        "description": "The name of the Managed Cluster resource."
+      }
+    },
+    "dnsPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Optional DNS prefix to use with hosted Kubernetes API server FQDN."
+      }
+    },
+    "osDiskSizeGB": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "Disk size (in GB) to provision for each of the agent pool nodes. This value ranges from 0 to 1023. Specifying 0 will apply the default disk size for that agentVMSize."
+      },
+      "minValue": 0,
+      "maxValue": 1023
+    },
+    "agentCount": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of nodes for the cluster."
+      },
+      "minValue": 1,
+      "maxValue": 50
+    },
+    "agentVMSize": {
+      "type": "string",
+      "defaultValue": "Standard_DS2_v2",
+      "metadata": {
+        "description": "The size of the Virtual Machine."
+      }
+    },
+    "randomGuid": {
+      "defaultValue": "[newGuid()]",
+      "type": "string",
+      "metadata": {
+        "description": "New random GUID"
+      }
+    },
+    "hiddenRandomString1": {
+      "defaultValue": "[newGuid()]",
+      "type": "securestring",
+      "metadata": {
+        "description": "hash for generate passwords"
+      }
+    },
+    "hiddenRandomString2": {
+      "defaultValue": "[newGuid()]",
+      "type": "securestring",
+      "metadata": {
+        "description": "hash for generate passwords"
+      }
+    },
+    "vNetTrigger": {
+      "defaultValue": "Basic",
+      "type": "string",
+      "allowedValues": [
+        "Basic",
+        "Advanced"
+      ],
+      "metadata": {
+        "description": "Trigger for Basic or Advanced AKS network configuration."
+      }
+    },
+    "vNetName": {
+      "defaultValue": "hlf-vNet",
+      "type": "string",
+      "metadata": {
+        "description": "Name of virtual network."
+      }
+    },
+    "advancedVnetNewOrExist": {
+      "defaultValue": "new",
+      "type": "string",
+      "allowedValues": [
+        "new",
+        "existing"
+      ],
+      "metadata": {
+        "description": "Values 'new' or 'existing'"
+      }
+    },
+    "advancedVnetResourceGroup": {
+      "defaultValue": "[resourceGroup().name]",
+      "type": "string",
+      "metadata": {
+        "description": "Resource group where defined vNet"
+      }
+    },
+    "clusterSubNetName": {
+      "defaultValue": "hlf-subnet",
+      "maxLength": 80,
+      "type": "string",
+      "metadata": {
+        "description": "Name of cluster subnet."
+      }
+    },
+    "clusterSubNetAddressPrefSize": {
+      "defaultValue": "172.21.0.0/16",
+      "type": "string",
+      "metadata": {
+        "description": "Preffix size of cluster subnet."
+      }
+    },
+    "serviceCidr": {
+      "defaultValue": "172.35.0.0/16",
+      "type": "string",
+      "metadata": {
+        "description": "A CIDR notation IP range from which to assign service cluster IPs."
+      }
+    },
+    "dnsServiceIP": {
+      "defaultValue": "172.35.0.10",
+      "type": "string",
+      "metadata": {
+        "description": "Containers DNS server IP address."
+      }
+    },
+    "dockerBridgeCidr": {
+      "defaultValue": "172.17.0.1/16",
+      "type": "string",
+      "metadata": {
+        "description": "A CIDR notation IP for Docker bridge."
+      }
+    },
+    "networkPlugin": {
+      "type": "string",
+      "defaultValue": "azure",
+      "allowedValues": [
+        "azure",
+        "kubenet"
+      ],
+      "metadata": {
+        "description": "Network plugin used for building Kubernetes network."
+      }
+    },
+    "enableRBAC": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Boolean flag to turn on and off of RBAC."
+      }
+    },
+    "enableHttpApplicationRouting": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Boolean flag to turn on and off of http application routing."
+      }
+    },
+    "servicePrincipalClientId": {
+      "metadata": {
+        "description": "Service principal client ID"
+      },
+      "type": "securestring"
+    },
+    "servicePrincipalClientSecret": {
+      "metadata": {
+        "description": "Service principal client secret"
+      },
+      "type": "securestring"
+    },
+    "servicePrincipalObjectId": {
+      "defaultValue": "empty",
+      "type": "string",
+      "metadata": {
+        "description": "The objectId of service principal."
+      }
+    },
+    "hlfUserName": {
+      "type": "string",
+      "metadata": {
+        "description": "HLF user name"
+      }
+    },
+    "hlfCaPswd": {
+      "type": "securestring",
+      "maxLength": 64,
+      "metadata": {
+        "description": "HLF CA password"
+      }
+    },
+    "hlfCaRootCertPublicKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "HLF Root Certificate public key"
+      }
+    },
+    "hlfCaRootCertPrivateKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "HLF Root Certificate private key"
+      }
+    },
+    "kubernetesVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "The version of Kubernetes."
+      }
+    },
+    "workspaceName": {
+      "type": "string",
+      "maxLength": 19,
+      "metadata": {
+        "description": "Specify the name of the OMS workspace."
+      }
+    },
+    "enableOmsAgent": {
+      "defaultValue": true,
+      "type": "bool",
+      "metadata": {
+        "description": "Boolean flag to turn on and off of omsagent addon."
+      }
+    },
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The base URI where artifacts required by this template are located including a trailing '/'"
+      },
+      "defaultValue": "[deployment().properties.templateLink.uri]"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The sasToken required to access _artifactsLocation.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated. Use the defaultValue if the staging location is not secured."
+      },
+      "defaultValue": ""
+    }
+  },
+  "variables": {
+    "resourceGroup": "[resourceGroup().name]",
+    "netContributorRoleID": "4d97b98b-1d4f-4787-a291-c67834d212e7",
+    "vnetSubnetID": "[resourceId( parameters('advancedVnetResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('clusterSubNetName'))]",
+    "publicIpAddressName": "[concat(parameters('resourcePrefix'), '-fabric-ip-', parameters('randomGuid'))]",
+    "publiciptemplateUri": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/publicIpTemplate.json', parameters('_artifactsLocationSasToken')))]",
+    "aksManagedResourceGroup": "[concat('MC_', variables('resourceGroup'),'_', parameters('clusterName'), '_', parameters('location'))]",
+    "aRecordNamePrefix": "[parameters('hlfMemberType')]",
+    "keyVaultName": "[concat(parameters('resourcePrefix'), substring(parameters('randomGuid'), 0, 5), '-kv')]",
+    "kubernetesClusterAdminCredential": "KubernetesClusterAdminCredential",
+    "hlfRootCertPublicKeySecretName": "hlfCaRootCertPublicKey",
+    "hlfRootCertPrivateKeySecretName": "hlfCaRootCertPrivateKey",
+    "osType": "Linux",
+    "workspaceName": "[concat(parameters('resourcePrefix'), parameters('workspaceName'))]",
+    "logAnalyticsWorkspaceLocationMap": {
+      "australiaeast": "australiaeast",
+      "australiasoutheast": "australiasoutheast",
+      "brazilsouth": "brazilsouth",
+      "canadacentral": "canadacentral",
+      "canadaeast": "canadacentral",
+      "centralindia": "centralindia",
+      "centralus": "centralus",
+      "eastasia": "eastasia",
+      "eastus2euap": "eastus2euap",
+      "eastus2": "eastus2",
+      "eastus": "eastus",
+      "francecentral": "francecentral",
+      "japaneast": "japaneast",
+      "japanwest": "japaneast",
+      "koreacentral": "koreacentral",
+      "koreasouth": "koreacentral",
+      "northcentralus": "northcentralus",
+      "northeurope": "northeurope",
+      "southafricanorth": "southafricanorth",
+      "southcentralus": "southcentralus",
+      "southindia": "centralindia",
+      "southeastasia": "southeastasia",
+      "uksouth": "uksouth",
+      "ukwest": "ukwest",
+      "westcentralus": "westcentralus",
+      "westeurope": "westeurope",
+      "westus2": "westus2",
+      "westus": "westus"
+    },
+    "insightsLocationMap": {
+      "australiaeast": "australiaeast",
+      "australiasoutheast": "australiasoutheast",
+      "brazilsouth": "brazilsouth",
+      "canadacentral": "canadacentral",
+      "canadaeast": "canadacentral",
+      "centralindia": "centralindia",
+      "centralus": "centralus",
+      "westcentralus": "westcentralus",
+      "eastasia": "eastasia",
+      "eastus": "eastus",
+      "eastus2": "eastus2",
+      "eastus2euap": "eastus2",
+      "francecentral": "francecentral",
+      "japaneast": "japaneast",
+      "japanwest": "japaneast",
+      "koreacentral": "koreacentral",
+      "koreasouth": "koreacentral",
+      "northcentralus": "northcentralus",
+      "northeurope": "northeurope",
+      "southafricanorth": "southafricanorth",
+      "southcentralus": "southcentralus",
+      "southeastasia": "southeastasia",
+      "southindia": "centralindia",
+      "uksouth": "uksouth",
+      "ukwest": "uksouth",
+      "westeurope": "westeurope",
+      "westus": "westus",
+      "westus2": "westus2"
+    },
+    "logAnalyticsWorkspaceFallbackLocation": "eastus",
+    "logAnalyticsWorkspaceLocation": "[if(contains(variables('logAnalyticsWorkspaceLocationMap'), parameters('location')), variables('logAnalyticsWorkspaceLocationMap')[parameters('location')], variables('logAnalyticsWorkspaceFallbackLocation'))]",
+
+    "insightsFallbackLocation": "eastus",
+    "insightsLocation": "[if(contains(variables('insightsLocationMap'), parameters('location')), variables('insightsLocationMap')[parameters('location')], variables('insightsFallbackLocation'))]",
+
+    "storageName": "[concat(parameters('resourcePrefix'), substring(parameters('randomGuid'), 0, 5))]",
+    "funcName": "[concat(parameters('resourcePrefix'), substring(parameters('randomGuid'), 0, 5))]",
+    "hlfNumberNodes": "[if(equals(parameters('hlfMemberType'), 'orderer'), parameters('hlfOrdererNodesNumber'), parameters('hlfPeerNodesNumber'))]",
+    "hlfResourceProvider": "[concat(parameters('resourcePrefix'), 'HyperLedgerMember', substring(parameters('randomGuid'), 0, 5))]",
+    "hlfResourceProviderLocationMap": {
+      "eastus": "eastus",
+      "eastus2": "eastus",
+      "westus": "westus2",
+      "westus2": "westus2",
+      "centralus": "eastus",
+      "japanwest": "japanwest",
+      "japaneast": "japaneast",
+      "southcentralus": "eastus",
+      "northcentralus": "eastus",
+      "westcentralus": "westus2",
+      "eastus2euap": "eastus",
+      "canadaeast": "canadaeast",
+      "canadacentral": "canadacentral",
+      "australiaeast": "australiaeast",
+      "australiasoutheast": "australiasoutheast",
+      "brazilsouth": "eastus",
+      "southeastasia": "westus2",
+      "eastasia": "westus2",
+      "westeurope": "westeurope",
+      "northeurope": "northeurope",
+      "ukwest": "northeurope",
+      "uksouth": "northeurope",
+      "southindia": "westus2",
+      "centralindia": "westus2",
+      "westindia": "westus2",
+      "koreasouth": "westus2",
+      "koreacentral": "westus2",
+      "southafricanorth": "northeurope"
+    },
+    "hlfResourceProviderFallbackLocation": "eastus",
+    "hlfResourceProviderLocation": "[if(contains(variables('hlfResourceProviderLocationMap'), parameters('location')), variables('hlfResourceProviderLocationMap')[parameters('location')], variables('hlfResourceProviderFallbackLocation'))]",
+
+    "omsagentAksTrigger": {
+      "enabled": "[parameters('enableOmsAgent')]",
+      "config": {
+        "logAnalyticsWorkspaceResourceID": "[resourceId(variables('resourceGroup'), 'microsoft.operationalinsights/workspaces', variables('workspaceName'))]"
+      }
+    },
+
+    "pg_fabric_ca_server_name": "[concat(take(concat(toLower(parameters('resourcePrefix')), if(empty(parameters('resourcePrefix')),'','-'), 'fabric-ca-', parameters('randomGuid')), 62), 'e')]",
+    "pg_fabric_ca_database_name": "fabric_ca",
+    "pg_fabric_ca_firewall_rules_name": "AllowAllWindowsAzureIps",
+    "pg_administratorLogin": "[concat('a', replace(parameters('hiddenRandomString1'), '-', '_'))]",
+    "pg_administratorPassword": "[concat(parameters('hiddenRandomString2'), toUpper(uniquestring(parameters('hiddenRandomString1'))))]",
+    "funcNodeJsPackageUri": "[uri(parameters('_artifactsLocation'), concat('artifacts/funcNodeJS.zip', parameters('_artifactsLocationSasToken')))]",
+    "azureHLFTrackingGuid": "f6ba5bf8-c45c-5917-a308-3522bfafc34b"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('pid-', variables('azureHLFTrackingGuid'))]",
+      "apiVersion": "2019-05-01",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[parameters('enableOmsAgent')]",
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "name": "[variables('workspaceName')]",
+      "apiVersion": "2017-04-26-preview",
+      "location": "[variables('logAnalyticsWorkspaceLocation')]",
+      "properties": {
+        "features": {
+          "searchVersion": 1
+        }
+      }
+    },
+    {
+      "condition": "[parameters('enableOmsAgent')]",
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('ContainerInsights(', variables('workspaceName'), ')')]",
+      "dependsOn": [
+        "[variables('workspaceName')]"
+      ],
+      "apiVersion": "2019-05-01",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+          },
+          "variables": {
+          },
+          "resources": [
+            {
+              "apiVersion": "2015-11-01-preview",
+              "type": "Microsoft.OperationsManagement/solutions",
+              "location": "[variables('logAnalyticsWorkspaceLocation')]",
+              "name": "[concat('ContainerInsights(', variables('workspaceName'), ')')]",
+              "properties": {
+                "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]"
+              },
+              "plan": {
+                "name": "[concat('ContainerInsights(', variables('workspaceName'), ')')]",
+                "product": "[concat('OMSGallery/', 'ContainerInsights')]",
+                "promotionCode": "",
+                "publisher": "Microsoft"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiVersion": "2019-08-01",
+      "type": "Microsoft.ContainerService/managedClusters",
+      "dependsOn": [
+        "[variables('workspaceName')]",
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('vNetName'))]",
+        "[concat('Microsoft.Resources/deployments/', 'ClusterSubnetRoleAssignmentDeployment', substring(parameters('randomGuid'), 0, 5))]"
+      ],
+      "location": "[parameters('location')]",
+      "name": "[parameters('clusterName')]",
+      "properties": {
+        "kubernetesVersion": "[parameters('kubernetesVersion')]",
+        "enableRBAC": "[parameters('enableRBAC')]",
+        "dnsPrefix": "[parameters('dnsPrefix')]",
+        "agentPoolProfiles": [
+          {
+            "name": "agentpool",
+            "osDiskSizeGB": "[parameters('osDiskSizeGB')]",
+            "count": "[parameters('agentCount')]",
+            "vmSize": "[parameters('agentVMSize')]",
+            "osType": "[variables('osType')]",
+            "storageProfile": "ManagedDisks",
+            "vnetSubnetID": "[if(contains(parameters('vNetTrigger'),'Basic'), json('null'), variables('vnetSubnetID'))]"
+          }
+        ],
+        "servicePrincipalProfile": {
+          "clientId": "[parameters('servicePrincipalClientId')]",
+          "secret": "[parameters('servicePrincipalClientSecret')]"
+        },
+        "networkProfile": {
+          "networkPlugin": "[parameters('networkPlugin')]",
+          "serviceCidr": "[if(contains(parameters('vNetTrigger'),'Basic'), json('null'), parameters('serviceCidr'))]",
+          "dnsServiceIP": "[if(contains(parameters('vNetTrigger'),'Basic'), json('null'), parameters('dnsServiceIP'))]",
+          "dockerBridgeCidr": "[if(contains(parameters('vNetTrigger'),'Basic'), json('null'), parameters('dockerBridgeCidr'))]"
+        },
+        "addonProfiles": {
+          "httpApplicationRouting": {
+            "enabled": "[parameters('enableHttpApplicationRouting')]"
+          },
+          "omsagent": "[if(equals(parameters('enableOmsAgent'), bool('false')), json('null'), variables('omsagentAksTrigger'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "[variables('keyVaultName')]",
+      "apiVersion": "2018-02-14",
+      "location": "[parameters('location')]",
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "accessPolicies": [
+        ]
+      },
+      "comments": "Key Vault for storing secrets."
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyVaultName'),'/', variables('kubernetesClusterAdminCredential'))]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "value": "[listClusterAdminCredential(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName')), '2019-08-01').kubeconfigs[0].value]",
+        "contentType": "string"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters/', parameters('clusterName'))]"
+      ],
+      "comments": "Secret of Kubernetes Cluster Admin Credential"
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyVaultName'),'/', variables('hlfRootCertPublicKeySecretName'))]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "value": "[parameters('hlfCaRootCertPublicKey')]",
+        "contentType": "string"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/', variables('keyVaultName'))]"
+      ],
+      "comments": "Secret of HLF Root Certificate public key"
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyVaultName'),'/', variables('hlfRootCertPrivateKeySecretName'))]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "value": "[parameters('hlfCaRootCertPrivateKey')]",
+        "contentType": "string"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/', variables('keyVaultName'))]"
+      ],
+      "comments": "Secret of HLF Root Certificate private key"
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "name": "[concat(variables('keyVaultName'), '/add')]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites/', variables('funcName')), '2018-11-01', 'Full').identity.principalId]",
+            "permissions": {
+              "secrets": [
+                "all"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults/', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[and(equals(parameters('vNetTrigger'), 'Advanced'), equals(parameters('advancedVnetNewOrExist'), 'new'))]",
+      "apiVersion": "2019-04-01",
+      "name": "[parameters('vNetName')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[parameters('location')]",
+      "properties": {
+        "subnets": [
+          {
+            "name": "[parameters('clusterSubNetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('clusterSubNetAddressPrefSize')]"
+            }
+          }
+        ],
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('clusterSubNetAddressPrefSize')]"
+          ]
+        }
+      }
+    },
+    {
+      "condition": "[equals(parameters('vNetTrigger'), 'Advanced')]",
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('ClusterSubnetRoleAssignmentDeployment', substring(parameters('randomGuid'), 0, 5))]",
+      "apiVersion": "2019-05-01",
+      "resourceGroup": "[parameters('advancedVnetResourceGroup')]",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+          },
+          "variables": {
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets/providers/roleAssignments",
+              "apiVersion": "2018-07-01",
+              "name": "[concat(parameters('vNetName'), '/', parameters('clusterSubNetName'), '/Microsoft.Authorization/', parameters('randomGuid'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('netContributorRoleID'))]",
+                "principalId": "[parameters('servicePrincipalObjectId')]",
+                "scope": "[resourceId(parameters('advancedVnetResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('clusterSubNetName'))]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('vNetName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('enableHttpApplicationRouting')]",
+      "apiVersion": "2019-05-01",
+      "name": "publicIpDeployment",
+      "dependsOn": [
+        "[resourceId('Microsoft.CustomProviders/resourceProviders/', variables('hlfResourceProvider'))]"
+      ],
+      "type": "Microsoft.Resources/deployments",
+      "resourceGroup": "[variables('aksManagedResourceGroup')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('publiciptemplateUri')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "publicIPAddressName": {
+            "value": "[variables('publicIPAddressName')]"
+          },
+          "dnsZoneName": {
+            "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters/', parameters('clusterName')), '2019-08-01').addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName]"
+          },
+          "aRecordNamePrefix": {
+            "value": "[variables('aRecordNamePrefix')]"
+          },
+          "dnsRecordsCount": {
+            "value": "[int(variables('hlfNumberNodes'))]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/servers",
+      "apiVersion": "2017-12-01",
+      "name": "[variables('pg_fabric_ca_server_name')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "B_Gen5_1",
+        "tier": "Basic",
+        "family": "Gen5",
+        "capacity": 1
+      },
+      "properties": {
+        "createMode": "Default",
+        "storageProfile": {
+          "storageMB": 5120,
+          "backupRetentionDays": 7,
+          "geoRedundantBackup": "Disabled"
+        },
+        "version": "11",
+        "sslEnforcement": "Enabled",
+        "administratorLogin": "[variables('pg_administratorLogin')]",
+        "administratorLoginPassword": "[variables('pg_administratorPassword')]"
+      },
+      "resources": [
+        {
+          "name": "[variables('pg_fabric_ca_database_name')]",
+          "type": "databases",
+          "apiVersion": "2017-12-01",
+          "properties": {
+            "charset": "utf8",
+            "collation": "English_United States.1252"
+          },
+          "dependsOn": [
+            "[concat('Microsoft.DBforPostgreSQL/servers/', variables('pg_fabric_ca_server_name'))]"
+          ]
+        },
+        {
+          "type": "firewallRules",
+          "apiVersion": "2017-12-01",
+          "name": "[variables('pg_fabric_ca_firewall_rules_name')]",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.DBforPostgreSQL/servers', variables('pg_fabric_ca_server_name'))]",
+            "[resourceId('Microsoft.DBforPostgreSQL/servers/databases', variables('pg_fabric_ca_server_name'), variables('pg_fabric_ca_database_name'))]"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "2018-07-01",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      }
+    },
+    {
+      "apiVersion": "2018-05-01-preview",
+      "name": "[variables('funcName')]",
+      "type": "Microsoft.Insights/components",
+      "location": "[variables('insightsLocation')]",
+      "properties": {
+        "ApplicationId": "[variables('funcName')]",
+        "Application_Type": "web",
+        "Request_Source": "rest"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2018-02-01",
+      "name": "[variables('funcName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Y1",
+        "tier": "Dynamic",
+        "size": "Y1",
+        "family": "Y",
+        "capacity": 0
+      },
+      "kind": "functionapp",
+      "properties": {
+        "name": "[variables('funcName')]",
+        "computeMode": "Dynamic"
+      }
+    },
+    {
+      "name": "[variables('funcName')]",
+      "type": "Microsoft.Web/sites",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "node"
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2018-07-01').keys[0].value)]"
+            },
+            {
+              "name": "StorageBlobEndpoint",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageName')), '2018-07-01').primaryEndpoints.blob]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~2"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2018-07-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[concat(toLower(variables('funcName')), '9ccc')]"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "10.14.1"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "[variables('funcNodeJsPackageUri')]"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('microsoft.insights/components/',variables('funcName')), '2018-05-01-preview').InstrumentationKey]"
+            },
+            {
+              "name": "AzureWebJobsSecretStorageType",
+              "value": "Files"
+            },
+            {
+              "name": "[variables('kubernetesClusterAdminCredential')]",
+              "value": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('kubernetesClusterAdminCredential')).secretUriWithVersion, ')')]"
+            },
+            {
+              "name": "[variables('hlfRootCertPublicKeySecretName')]",
+              "value": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('hlfRootCertPublicKeySecretName')).secretUriWithVersion, ')')]"
+            },
+            {
+              "name": "[variables('hlfRootCertPrivateKeySecretName')]",
+              "value": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('hlfRootCertPrivateKeySecretName')).secretUriWithVersion, ')')]"
+            },
+            {
+              "name": "hlfBackendDbType",
+              "value": "[parameters('hlfBackendDbType')]"
+            },
+            {
+              "name": "hlfMemberType",
+              "value": "[parameters('hlfMemberType')]"
+            },
+            {
+              "name": "hlfOrgName",
+              "value": "[parameters('hlfOrgName')]"
+            }
+          ]
+        },
+        "name": "[variables('funcName')]",
+        "clientAffinityEnabled": false,
+        "reserved": false,
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('funcName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+        "[resourceId('Microsoft.Web/serverfarms', variables('funcName'))]",
+        "[resourceId('Microsoft.ContainerService/managedClusters/', parameters('clusterName'))]"
+      ],
+      "apiVersion": "2018-11-01",
+      "location": "[parameters('location')]",
+      "kind": "functionapp"
+    },
+    {
+      "apiVersion": "2018-09-01-preview",
+      "type": "Microsoft.CustomProviders/resourceProviders",
+      "name": "[variables('hlfResourceProvider')]",
+      "location": "[variables('hlfResourceProviderLocation')]",
+      "dependsOn": [
+        "[concat('Microsoft.Web/sites/',variables('funcName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults/accessPolicies', variables('keyVaultName'), 'add')]"
+      ],
+      "properties": {
+        "resourceTypes": [
+          {
+            "name": "deploy",
+            "routingType": "Proxy",
+            "endpoint": "[concat('https://', reference(resourceId('Microsoft.Web/sites/', variables('funcName'))).hostNames[0], '/api/{requestPath}', '?code=', listSecrets(resourceId('Microsoft.Web/sites/functions',variables('funcName'),'HttpTrigger'), '2018-11-01').key)]"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2018-09-01-preview",
+      "type": "Microsoft.CustomProviders/resourceProviders/deploy",
+      "name": "[concat(variables('hlfResourceProvider'), '/', variables('funcName'))]",
+      "location": "[variables('hlfResourceProviderLocation')]",
+      "properties": {
+        "hlfOrgName": "[parameters('hlfOrgName')]",
+        "hlfNodesNumber": "[variables('hlfNumberNodes')]",
+        "hlfMemberType": "[parameters('hlfMemberType')]",
+        "hlfBackendDbType": "[parameters('hlfBackendDbType')]",
+        "clusterName": "[parameters('clusterName')]",
+        "kubernetesVersion": "[parameters('kubernetesVersion')]",
+        "userName": "[parameters('hlfUserName')]",
+        "userPswd": "[parameters('hlfCaPswd')]",
+        "postgresConnectionString": "[format('host={0} port=5432 user={1} password={2} dbname={3} sslmode=require', reference(resourceId('Microsoft.DBforPostgreSQL/servers', variables('pg_fabric_ca_server_name')), '2017-12-01').fullyQualifiedDomainName, concat(variables('pg_administratorLogin'),'@', variables('pg_fabric_ca_server_name')), variables('pg_administratorPassword'), variables('pg_fabric_ca_database_name'))]",
+        "publicIpAddress": "[reference('publicIpDeployment').outputs.publicIpAddress.value]",
+        "dnsZoneDomain": "[reference(resourceId('Microsoft.ContainerService/managedClusters/', parameters('clusterName')), '2019-08-01').addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName]"
+      }
+    }
+  ],
+  "outputs": {
+    "hlfDeploy": {
+      "type": "string",
+      "value": "[concat('Deploy finished.\nUse next command for connect directly to the aks cluster \naz aks get-credentials –g ', variables('resourceGroup'), ' -n ', parameters('clusterName'))]"
+    }
+  }
+}

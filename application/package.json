@@ -1,0 +1,21 @@
+{
+  "name": "FabricNodeJSApplication",
+  "version": "1.0.0",
+  "description": "Fabric NodeJS Application",
+  "main": "",
+  "dependencies": {
+    "fabric-ca-client": "^1.4.4",
+    "fabric-network": "^1.4.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "importAdmin": "node importAdmin.js",
+    "registerUser": "node registerUser.js",
+    "installCC": "node install.js",
+    "instantiateCC": "node instantiate.js",
+    "invokeCC": "node invoke.js",
+    "queryCC": "node query.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
