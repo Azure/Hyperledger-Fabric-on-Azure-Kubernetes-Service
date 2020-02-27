@@ -1,0 +1,35 @@
+{
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "project": "./tsconfig.json"
+    },
+    "plugins": [
+        "@typescript-eslint"
+    ],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/all",
+        "plugin:@typescript-eslint/recommended-requiring-type-checking"
+    ],
+    "env": {
+        "browser": false
+    },
+    "overrides": [
+        {
+            "files": [
+                "*"
+            ],
+            "rules": {
+                "@typescript-eslint/no-magic-numbers": "off",
+                "@typescript-eslint/no-unnecessary-condition": "off",
+                "@typescript-eslint/strict-boolean-expressions": "off",
+                "@typescript-eslint/restrict-template-expressions": "off",
+                "@typescript-eslint/space-before-function-paren": ["error", { "named": "never" }],
+                "@typescript-eslint/typedef": ["error", { "arrowParameter": false }],
+                "@typescript-eslint/camelcase": ["error"],
+                "@typescript-eslint/quotes": ["error", "double", { "avoidEscape": true, "allowTemplateLiterals": true }]
+            }
+        }
+    ]
+}
