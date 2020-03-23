@@ -23,7 +23,7 @@ spec:
       - name: fabric-tools-secrets
       containers:
         - name: nginx-ingress-controller
-          image: "akvhlftemplate.azurecr.io/nginx/nginx-ingress-controller:0.26.1"
+          image: "hlfakstemplate.azurecr.io/nginx/nginx-ingress-controller:0.26.1"
           args:
             - /nginx-ingress-controller
             - --default-backend-service={namespace}/nginx-ingress-default-backend

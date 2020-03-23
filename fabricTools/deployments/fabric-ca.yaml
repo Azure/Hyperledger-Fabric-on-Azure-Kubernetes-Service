@@ -10,6 +10,10 @@ spec:
      protocol: TCP
      port: 7054
      targetPort: 7054
+   - name: operations
+     protocol: TCP
+     port: 9443
+     targetPort: 9443
 --- 
 apiVersion: apps/v1
 kind: Deployment
@@ -37,15 +41,19 @@ spec:
      - name: fabric-ca-server-config
        secret:
           secretName: fabric-ca-server-config
+     - name: pg-ssl-rootcert
+       secret: 
+          secretName: pg-ssl-rootcert
      containers:
        - name: ca
-         image: akvhlftemplate.azurecr.io/hyperledger/fabric-ca:1.4.4
+         image: hlfakstemplate.azurecr.io/hyperledger/fabric-ca:1.4.4
          imagePullPolicy: Always
          env: 
          - name:  FABRIC_CA_HOME
            value: /etc/hyperledger/fabric-ca-server
          ports:
           - containerPort: 7054
+          - containerPort: 9443
          command: ["/bin/bash"]
          args:  ["-c", "rm -rf $FABRIC_CA_HOME;fabric-ca-server start --port 7054"]
          volumeMounts:
@@ -60,4 +68,8 @@ spec:
            - mountPath: /etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
              name: fabric-ca-server-config
              subPath: fabric-ca-server-config.yaml
+             readOnly: true
+           - mountPath: /etc/hyperledger/pgcerts/pg-ssl-rootcert.pem
+             name: pg-ssl-rootcert
+             subPath: pg-ssl-rootcert.pem
              readOnly: true

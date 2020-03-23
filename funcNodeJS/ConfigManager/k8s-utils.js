@@ -1,24 +1,28 @@
 module.exports = {
-  createClient: function(base64EncodedKubernetesConfig){
-      // connection
-      const Request = require('kubernetes-client/backends/request')
+  createClient: function(base64EncodedKubernetesConfig) {
+    // connection
+    const Request = require("kubernetes-client/backends/request");
 
-      const { Client, KubeConfig } = require('kubernetes-client')
+    const { Client, KubeConfig } = require("kubernetes-client");
 
-      const kubeconfig = new KubeConfig()
+    const kubeconfig = new KubeConfig();
 
-      const config = Buffer.from(base64EncodedKubernetesConfig, 'base64').toString()
-      kubeconfig.loadFromString(config)
-      const backend = new Request({
-          kubeconfig
-      });
+    const config = Buffer.from(
+      base64EncodedKubernetesConfig,
+      "base64"
+    ).toString();
 
-      const aksClientVersion = '1.13'
-      const client = new Client({
-          backend,
-          version: aksClientVersion
-      });
+    kubeconfig.loadFromString(config);
+    const backend = new Request({
+      kubeconfig
+    });
 
-      return client;
+    const aksClientVersion = "1.13";
+    const client = new Client({
+      backend,
+      version: aksClientVersion
+    });
+
+    return client;
   }
 };

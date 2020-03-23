@@ -1,33 +1,26 @@
 #!/bin/bash
 
+. /var/hyperledger/scripts/utils.sh
+. /var/hyperledger/scripts/globals.sh
+
 ORG_NAME=$1
 NODE_COUNT=$2
 DOMAIN_NAME=$3
 NODE_TYPE=$4
 CRYPTO_PATH=/tmp/crypto-config
 FABRIC_MSP_PATH=/tmp/FabricMSP
-CAServerName="ca.ca.svc.cluster.local"
-CAServerPort=7054
-CA_ADMIN_NAME=${FABRIC_CA_BOOTSTRAP_USERNAME}
-CA_ADMIN_PASSWORD=${FABRIC_CA_BOOTSTRAP_PASSWORD}
+CA_ADMIN_NAME=$(cat $CA_ADMIN_USERNAME_FILE)
+CA_ADMIN_PASSWORD=$(cat $CA_ADMIN_PASSWORD_FILE)
 CA_CRYPTO_PATH="$CRYPTO_PATH/fabca/$ORG_NAME"
-
-. /var/hyperledger/scripts/utils.sh
-. /var/hyperledger/scripts/namespaces.sh
-
-function setCAServer() {
-   CAServerName=$1
-   CAServerPort=$2
-}
 
 function registerNode() {
   nodeType=$1
   nodeNum=$2
   
   if [ "$nodeType" = "orderer" ]; then
-    fabric-ca-client register --id.name "orderer$nodeNum.$ORG_NAME" --id.secret ${FABRIC_CA_BOOTSTRAP_PASSWORD} --id.type orderer -u https://$CAServerName:$CAServerPort > /dev/null
+    fabric-ca-client register --id.name "orderer$nodeNum.$ORG_NAME" --id.secret ${CA_ADMIN_PASSWORD} --id.type orderer -u https://$CAServerName:$CAServerPort > /dev/null
   else
-    fabric-ca-client register --id.name "peer$nodeNum.$ORG_NAME" --id.secret ${FABRIC_CA_BOOTSTRAP_PASSWORD} --id.type peer -u https://$CAServerName:$CAServerPort > /dev/null
+    fabric-ca-client register --id.name "peer$nodeNum.$ORG_NAME" --id.secret ${CA_ADMIN_PASSWORD} --id.type peer -u https://$CAServerName:$CAServerPort > /dev/null
   fi
   res=$?
   verifyResult $res "Registering ${nodeType}${nodeNum} failed!"
@@ -38,7 +31,7 @@ function registerNode() {
 
 
 function registerAdminUser() {
-  fabric-ca-client register --id.name admin.$ORG_NAME --id.secret ${FABRIC_CA_BOOTSTRAP_PASSWORD} --id.type admin --id.attrs "hf.Registrar.Roles=*,hf.Registrar.Attributes=*,hf.Revoker=true,hf.GenCRL=true,admin=true:ecert,abac.init=true:ecert" -u https://$CAServerName:$CAServerPort > /dev/null
+  fabric-ca-client register --id.name admin.$ORG_NAME --id.secret ${CA_ADMIN_PASSWORD} --id.type admin --id.attrs "hf.Registrar.Roles=*,hf.Registrar.Attributes=*,hf.Revoker=true,hf.GenCRL=true,admin=true:ecert,abac.init=true:ecert" -u https://$CAServerName:$CAServerPort > /dev/null
   res=$?
   verifyResult $res "Registering admin user for ${ORG_NAME} org failed!"
   echo 
@@ -47,7 +40,7 @@ function registerAdminUser() {
 }
 
 function registerAdminUserTls() {
-  fabric-ca-client register --id.name admin.tls.$ORG_NAME --id.secret ${FABRIC_CA_BOOTSTRAP_PASSWORD} --id.type admin --id.attrs "hf.Registrar.Roles=*,hf.Registrar.Attributes=*,hf.Revoker=true,hf.GenCRL=true,admin=true:ecert,abac.init=true:ecert" -u https://$CAServerName:$CAServerPort > /dev/null
+  fabric-ca-client register --id.name admin.tls.$ORG_NAME --id.secret ${CA_ADMIN_PASSWORD} --id.type admin --id.attrs "hf.Registrar.Roles=*,hf.Registrar.Attributes=*,hf.Revoker=true,hf.GenCRL=true,admin=true:ecert,abac.init=true:ecert" -u https://$CAServerName:$CAServerPort > /dev/null
   res=$?
   verifyResult $res "Registering admin user TLS for ${ORG_NAME} org failed!"
   echo
@@ -64,7 +57,7 @@ function enrollNode() {
   rm -rf $FABRIC_MSP_PATH/*
   export FABRIC_CA_CLIENT_MSPDIR=$FABRIC_MSP_PATH
 
-  fabric-ca-client enroll -u https://${nodeType}${nodeNum}.${ORG_NAME}:${FABRIC_CA_BOOTSTRAP_PASSWORD}@$CAServerName:$CAServerPort  --csr.names "O=$ORG_NAME"
+  fabric-ca-client enroll -u https://${nodeType}${nodeNum}.${ORG_NAME}:${CA_ADMIN_PASSWORD}@$CAServerName:$CAServerPort  --csr.names "O=$ORG_NAME"
   res=$?
   if [ $res -ne 0 ]; then
     logError $res "Generating enrollement certificate for ${nodeType}${nodeNum} failed"
@@ -103,7 +96,7 @@ function enrollNode() {
 function enrollAdminUser() {
     rm -rf $FABRIC_MSP_PATH/*
     export FABRIC_CA_CLIENT_MSPDIR=$FABRIC_MSP_PATH
-    fabric-ca-client enroll -u https://admin.$ORG_NAME:${FABRIC_CA_BOOTSTRAP_PASSWORD}@$CAServerName:$CAServerPort --csr.names "O=$ORG_NAME"
+    fabric-ca-client enroll -u https://admin.$ORG_NAME:${CA_ADMIN_PASSWORD}@$CAServerName:$CAServerPort --csr.names "O=$ORG_NAME"
     res=$?
     if [ $res -ne 0 ]; then
       logError $res "Generating enrollement certificate for admin user failed"
@@ -140,7 +133,7 @@ function enrollAdminUser() {
 function enrollAdminUserTLS() {
     rm -rf $FABRIC_MSP_PATH/*
     export FABRIC_CA_CLIENT_MSPDIR=$FABRIC_MSP_PATH
-    fabric-ca-client enroll -u https://admin.tls.$ORG_NAME:${FABRIC_CA_BOOTSTRAP_PASSWORD}@$CAServerName:$CAServerPort --csr.names "O=$ORG_NAME" --enrollment.profile tls
+    fabric-ca-client enroll -u https://admin.tls.$ORG_NAME:${CA_ADMIN_PASSWORD}@$CAServerName:$CAServerPort --csr.names "O=$ORG_NAME" --enrollment.profile tls
     res=$?
     if [ $res -ne 0 ]; then
       logError $res "Generating TLS certificate for admin user failed"
@@ -182,7 +175,7 @@ function enrollNodeTLS() {
 
   rm -rf $FABRIC_MSP_PATH/*
   export FABRIC_CA_CLIENT_MSPDIR=$FABRIC_MSP_PATH
-  fabric-ca-client enroll -u https://${nodeType}${nodeNum}.${ORG_NAME}:${FABRIC_CA_BOOTSTRAP_PASSWORD}@$CAServerName:$CAServerPort --enrollment.profile tls --csr.hosts "${nodeType}$i,${nodeType}$i.$DOMAIN_NAME"
+  fabric-ca-client enroll -u https://${nodeType}${nodeNum}.${ORG_NAME}:${CA_ADMIN_PASSWORD}@$CAServerName:$CAServerPort --enrollment.profile tls --csr.hosts "${nodeType}$i,${nodeType}$i.$DOMAIN_NAME"
   res=$?
   if [ $res -ne 0 ]; then
     logError $res "Generating TLS certificate for ${nodeType}${nodeNum} failed"
@@ -232,8 +225,6 @@ if [ "$NODE_TYPE" = "orderer" ]; then
 else
   ORG_CRYPTO_PATH="$CRYPTO_PATH/peerOrganizations/$ORG_NAME/"
 fi
-
-setCAServer "ca.ca.svc.cluster.local" 7054
 
 # ---------------------------------------------------
 # Enroll fabric CA admin

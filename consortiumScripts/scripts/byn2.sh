@@ -25,9 +25,11 @@ function printHelp() {
     echo "   addPeerInConsortium      - add a peer organization to the consortium"
     echo "   createChannel            - create a new channel with only orderer organization"
     echo "   addPeerInChannel         - add peer organization to the channel"
+    echo "   joinNodesInChannel       - join peer nodes in the channel"
+    echo "   updateAnchorPeer         - update anchor peer of peer organization"
     echo "   installDemoChaincode     - install chaincode on a peer node"
-    echo "   instantiateDemoChaincode - instantiate chaincode on a peer node"
-    echo "   invokeDemoChaincode      - invoke chaincode function on a peer node"
+    echo "   instantiateDemoChaincode - instantiate chaincode on a channel"
+    echo "   invokeDemoChaincode      - invoke chaincode function on a channel"
     echo "   queryDemoChaincode       - query chaincode function on a peer node"
     echo "    -h   print this message"
     echo ""
@@ -80,6 +82,18 @@ printJoinNodesInChannelHelp() {
   echo "byn.sh joinNodesInChannel \"mychannel\" \"orderer1.5ef38927f80e49d5b0de.southeastasia.aksapp.io:443\" \"https://[account].file.core.windows.net/[file-share]?[SAS]\""
   echo ""
   echo "byn.sh joinNodesInChannel -h   print this message"
+  echo
+  echo "Refer 'https://aka.ms/aks-hlftemplate-user-guide' link for detailed user guide"
+}
+
+printUpdateAnchorPeerHelp() {
+  echo "Usage: "
+  echo "  byn.sh updateAnchorPeer <commaSeperatedListofPeerNodesName> <channelName> <ordererAddress> <storageURI-with-SAStoken>"
+  echo ""
+  echo "Example:"
+  echo "byn.sh updateAnchorPeer \"peer1\" \"mychannel\" \"orderer1.5ef38927f80e49d5b0de.southeastasia.aksapp.io:443\" \"https://[account].file.core.windows.net/[file-share]?[SAS]\""
+  echo ""
+  echo "byn.sh updateAnchorPeer -h   print this message"
   echo
   echo "Refer 'https://aka.ms/aks-hlftemplate-user-guide' link for detailed user guide"
 }
@@ -405,6 +419,92 @@ joinNodesInChannel() {
   done
 }
 
+prepareAnchorPeerJson()
+{
+  OLDIFS=$IFS
+  IFS=, anchorPeers=($1)
+  IFS=$OLDIFS
+  lastPeerIndex=$((${#anchorPeers[@]} - 1))
+  {
+  echo '{"mod_policy": "Admins","value": {"anchor_peers": ['
+  for (( i=0; i<${#anchorPeers[@]}; i++ ))
+  do
+  echo '{"host": "'${anchorPeers[$i]}.${HLF_DOMAIN_NAME}'","port": 443'
+  if [ $i -eq ${lastPeerIndex} ]; then
+       echo '}'
+  else
+       echo '},'
+  fi
+  done
+  echo ']},"version": "0"}'
+  } > ./anchorPeer.json
+}
+
+updateAnchorPeer() {
+  while getopts ":h" opt; do
+    case "$opt" in
+    h | \?)
+      printUpdateAnchorPeerHelp
+      exit 0
+      ;;
+    esac
+  done
+
+  if [ $# -ne 4 ]; then
+      echo "Invalid number of arguments!!!"
+      printUpdateAnchorPeerHelp
+      exit 1
+  fi
+
+  ANCHOR_PEER_LIST=$1
+  CHANNEL_NAME=$2
+  ORDERER_ADDRESS=$3
+  storageURI=$4
+
+  rm -rf /tmp/hlf
+  mkdir -p /tmp/hlf
+  # download Orderer TLS CA to local directory
+  downloadOrdererTLS $storageURI "/tmp/hlf"
+
+  ORDERER_TLS_CA="/tmp/hlf/orderer/tlscacerts/ca.crt"
+  setPeerGlobals 1
+  echo
+  echo "========= Creating config transaction to update anchor peer for '${HLF_ORG_NAME}' for channel '${CHANNEL_NAME}' =========== "
+  echo
+  # Fetch the config for the channel, writing it to config.json
+  fetchChannelConfig ${CHANNEL_NAME} config.json
+
+  prepareAnchorPeerJson $ANCHOR_PEER_LIST 
+ 
+  # Modify the configuration to append the new org
+  jq -s ".[0] * {\"channel_group\":{\"groups\":{\"Application\":{\"groups\": {\"${HLF_ORG_NAME}\":{\"values\":{\"AnchorPeers\":.[1]}}}}}}}" config.json anchorPeer.json > modified_config.json
+  res=$?
+  verifyResult $res "Failed to generate new configuration block"
+
+  echo
+  echo "========= Compute config update based on difference between current and new configuration =========== "
+  echo
+  # Compute a config update, based on the differences between config.json and modified_config.json, write it as a transaction to org3_update_in_envelope.pb
+  createConfigUpdate ${CHANNEL_NAME} config.json modified_config.json ${HLF_ORG_NAME}_update_in_envelope.pb
+
+  echo
+  echo "========= Config transaction to update '${HLF_ORG_NAME}' anchor peer created ===== "
+  echo
+  echo
+  echo "========= Submitting transaction from peer admin which signs it as well ========= "
+  echo
+  set -x
+  peer channel update -f ${HLF_ORG_NAME}_update_in_envelope.pb -c ${CHANNEL_NAME} -o ${ORDERER_ADDRESS} --tls --cafile ${ORDERER_TLS_CA} --clientauth --certfile $ADMIN_TLS_CERTFILE --keyfile $ADMIN_TLS_KEYFILE &> $LOG_FILE
+  res=$?
+  set +x
+  cat $LOG_FILE
+  verifyResult $res "peer channel update transaction failed"
+
+  echo
+  echo "========= Config transaction to update '${HLF_ORG_NAME}' anchor peer for channel '${CHANNEL_NAME}' submitted! =========== "
+  echo
+}
+
 verifyPeerName()
 {
   peer=$1
@@ -649,6 +749,8 @@ elif [ "${COMMAND}" == "addPeerInChannel" ]; then
   addPeerInChannel "$@"
 elif [ "${COMMAND}" == "joinNodesInChannel" ]; then 
   joinNodesInChannel "$@"
+elif [ "${COMMAND}" == "updateAnchorPeer" ]; then
+  updateAnchorPeer "$@"
 elif [ "${COMMAND}" == "installDemoChaincode" ]; then 
   installDemoChaincode "$@"
 elif [ "${COMMAND}" == "instantiateDemoChaincode" ]; then 

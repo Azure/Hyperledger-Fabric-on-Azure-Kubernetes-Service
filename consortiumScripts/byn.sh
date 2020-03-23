@@ -22,7 +22,7 @@ theargs=""
 for i in "$@" ; do
    theargs="${theargs} \"$i\""
 done
-kubectl -n ${adminNamespace} wait --for=condition=Ready pod -l name=fabric-admin --timeout=300s &> $LOG_FILE
+kubectl -n ${adminNamespace} wait --for=condition=Ready pod -l name=fabric-admin --timeout=600s &> $LOG_FILE
 res=$?
 verifyResult $res "Failed to start fabric-admin pod"
 echo

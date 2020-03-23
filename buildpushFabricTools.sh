@@ -6,6 +6,6 @@ PACKAGE=$PWD
 SOURCE=$IMAGE_NAME:1.0
 TARGET=$DOCKERNAME/$IMAGE_NAME:$TAG
 
-docker build -f $REPO.dockerfile -t $SOURCE $PACKAGE
+docker build -f fabricTools/$REPO.dockerfile -t $SOURCE $PACKAGE
 docker tag $SOURCE $TARGET
 docker push $TARGET

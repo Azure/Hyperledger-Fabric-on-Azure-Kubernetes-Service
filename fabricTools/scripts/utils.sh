@@ -1,4 +1,4 @@
-. /var/hyperledger/scripts/namespaces.sh
+. /var/hyperledger/scripts/globals.sh
 
 function printCapabilities() {
 echo "
@@ -318,29 +318,22 @@ echo "
 }
 
 function waitCAServerUp() {
-    maxWaitTime=120  #wait maximum for 120s for CA server to come up
+    maxWaitTime=600  #wait maximum for 600s for CA server to come up
     curWaitTime=0
-    caServerName=$1
-
-    kubectl -n ${caNamespace} wait --for=condition=Ready pod -l name=${caServerName} --timeout=600s
-    res=$?
-    verifyResult $res "CA Server pod ready timeout"
-
-    CA_POD=$(kubectl -n ${caNamespace} get pods -l "name=${caServerName}" -ojsonpath={.items[0].metadata.name})
     while :
     do
-
-        res=$(kubectl -n ${caNamespace} logs $CA_POD | grep "Listening on")
+        echo "[$(date -u)]: Check CA server health"
+        res=$(curl http://${CAServerName}:${CAOperationPort}/healthz | grep "OK")
         if [ -z "$res" ];
         then
             if [ $curWaitTime -ge $maxWaitTime ]; then
-                verifyResult 1 "${caServerName} server: max wait timeout"
+                verifyResult 1 "${CAServerName} server: max wait timeout"
             else
-                curWaitTime=$((curWaitTime + 3))
-                sleep 3
+                curWaitTime=$((curWaitTime + 10))
+                sleep 10
             fi
         else
-            echo "${caServerName} server came up"
+            echo "${CAServerName} server came up"
             break
         fi
     done
@@ -419,7 +412,7 @@ kubectl -n ${sourceNamespace} get secret ${secretName} -o yaml | sed s/"namespac
 }
 
 logError() {
-  echo "==== HLF SETUP ERROR !!! "$2" !!! ERROR CODE: "$1" !!! ==============="
+  echo "==== [$(date -u)] HLF SETUP ERROR !!! "$2" !!! ERROR CODE: "$1" !!! ==============="
   echo
 }
 

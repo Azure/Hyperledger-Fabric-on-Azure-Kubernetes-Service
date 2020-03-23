@@ -415,14 +415,13 @@
     "pg_fabric_ca_database_name": "fabric_ca",
     "pg_fabric_ca_firewall_rules_name": "AllowAllWindowsAzureIps",
     "pg_administratorLogin": "[concat('a', replace(parameters('hiddenRandomString1'), '-', '_'))]",
-    "pg_administratorPassword": "[concat(parameters('hiddenRandomString2'), toUpper(uniquestring(parameters('hiddenRandomString1'))))]",
-    "funcNodeJsPackageUri": "[uri(parameters('_artifactsLocation'), concat('artifacts/funcNodeJS.zip', parameters('_artifactsLocationSasToken')))]",
-    "azureHLFTrackingGuid": "f6ba5bf8-c45c-5917-a308-3522bfafc34b"
+    "pg_administratorPassword": "[concat(uniquestring(parameters('hiddenRandomString2'), parameters('hlfCaPswd')), toUpper(uniquestring(parameters('hiddenRandomString1'))), 'aZ0')]",
+    "funcNodeJsPackageUri": "[uri(parameters('_artifactsLocation'), concat('artifacts/funcNodeJS.zip', parameters('_artifactsLocationSasToken')))]"
   },
   "resources": [
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "[concat('pid-', variables('azureHLFTrackingGuid'))]",
+      "name": "pid-f6ba5bf8-c45c-5917-a308-3522bfafc34b",
       "apiVersion": "2019-05-01",
       "properties": {
         "mode": "Incremental",
@@ -766,7 +765,7 @@
     },
     {
       "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2018-02-01",
+      "apiVersion": "2019-08-01",
       "name": "[variables('funcName')]",
       "location": "[parameters('location')]",
       "sku": {
@@ -904,7 +903,7 @@
         "kubernetesVersion": "[parameters('kubernetesVersion')]",
         "userName": "[parameters('hlfUserName')]",
         "userPswd": "[parameters('hlfCaPswd')]",
-        "postgresConnectionString": "[format('host={0} port=5432 user={1} password={2} dbname={3} sslmode=require', reference(resourceId('Microsoft.DBforPostgreSQL/servers', variables('pg_fabric_ca_server_name')), '2017-12-01').fullyQualifiedDomainName, concat(variables('pg_administratorLogin'),'@', variables('pg_fabric_ca_server_name')), variables('pg_administratorPassword'), variables('pg_fabric_ca_database_name'))]",
+        "postgresConnectionString": "[format('host={0} port=5432 user={1} password={2} dbname={3} sslmode=verify-full', reference(resourceId('Microsoft.DBforPostgreSQL/servers', variables('pg_fabric_ca_server_name')), '2017-12-01').fullyQualifiedDomainName, concat(variables('pg_administratorLogin'),'@', variables('pg_fabric_ca_server_name')), variables('pg_administratorPassword'), variables('pg_fabric_ca_database_name'))]",
         "publicIpAddress": "[reference('publicIpDeployment').outputs.publicIpAddress.value]",
         "dnsZoneDomain": "[reference(resourceId('Microsoft.ContainerService/managedClusters/', parameters('clusterName')), '2019-08-01').addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName]"
       }

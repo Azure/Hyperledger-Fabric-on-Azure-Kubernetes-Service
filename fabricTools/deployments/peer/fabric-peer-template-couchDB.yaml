@@ -36,7 +36,7 @@ spec:
       - name: fabric-tools-secrets
       containers:
       - name: couchdb{nodeNum}
-        image: akvhlftemplate.azurecr.io/hyperledger/fabric-couchdb:0.4.18
+        image: hlfakstemplate.azurecr.io/hyperledger/fabric-couchdb:0.4.18
         ports:
          - containerPort: 5984  
         volumeMounts:
@@ -44,7 +44,7 @@ spec:
            name: fabric-storage
            subPath: peer{nodeNum}-couchdb
       - name: peer{nodeNum}
-        image: akvhlftemplate.azurecr.io/hyperledger/fabric-peer:1.4.4
+        image: hlfakstemplate.azurecr.io/hyperledger/fabric-peer:1.4.4
         env:
         - name: CORE_LEDGER_STATE_STATEDATABASE
           value: "CouchDB"
@@ -75,7 +75,10 @@ spec:
         - name: CORE_PEER_TLS_ROOTCERT_FILE
           value: "/var/hyperledger/peer/tls/ca.crt"
         - name: CORE_PEER_TLS_CLIENTAUTHREQUIRED
-          value: "true"
+          valueFrom:
+            configMapKeyRef:
+              name: mutual-tls
+              key: enabled
         - name: CORE_PEER_TLS_CLIENTCERT_FILE
           value: "/var/hyperledger/peer/tls/server.crt"
         - name: CORE_PEER_TLS_CLIENTKEY_FILE

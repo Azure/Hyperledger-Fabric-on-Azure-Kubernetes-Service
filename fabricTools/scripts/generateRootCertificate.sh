@@ -1,7 +1,8 @@
 orgName=$1
 domainName=$2
 
-. /var/hyperledger/scripts/namespaces.sh
+. /var/hyperledger/scripts/globals.sh
+. /var/hyperledger/scripts/utils.sh
 
 rm -rf /tmp/rca
 mkdir -p /tmp/rca

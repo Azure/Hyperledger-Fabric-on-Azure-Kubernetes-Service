@@ -62,7 +62,7 @@ spec:
       - name: fabric-tools-secrets
       containers:
       - name: orderer
-        image: akvhlftemplate.azurecr.io/hyperledger/fabric-orderer:1.4.4
+        image: hlfakstemplate.azurecr.io/hyperledger/fabric-orderer:1.4.4
         command: ["sh", "-c", "orderer"]
         env:
         - name: ORDERER_GENERAL_LEDGERTYPE
@@ -74,7 +74,7 @@ spec:
         - name: ORDERER_GENERAL_LISTENPORT
           value: "7050"
         - name: FABRIC_LOGGING_SPEC
-          value: info
+          value: "info"
         - name: ORDERER_GENERAL_LOCALMSPDIR
           value: /var/hyperledger/orderer/msp
         - name: ORDERER_GENERAL_LOCALMSPID
@@ -94,7 +94,10 @@ spec:
         - name: ORDERER_GENERAL_TLS_ROOTCAS
           value: /var/hyperledger/orderer/tls/ca.crt
         - name: ORDERER_GENERAL_TLS_CLIENTAUTHREQUIRED
-          value: "true"
+          valueFrom:
+            configMapKeyRef:
+              name: mutual-tls
+              key: enabled
         - name: ORDERER_GENERAL_TLS_CLIENTROOTCAS
           value: /var/hyperledger/orderer/tls/ca.crt
         - name: ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY

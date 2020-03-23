@@ -13,7 +13,7 @@
     "containers": [
       {
         "name": "fabric-tools",
-        "image": "akvhlftemplate.azurecr.io/fabric-tools:1.0.0",
+        "image": "hlfakstemplate.azurecr.io/fabric-tools:versionplaceholder",
         "command": [
           "/bin/bash"
         ],
@@ -45,42 +45,18 @@
           {
             "name": "HLF_DOMAIN_NAME",
             "value": ""
+          }
+        ],
+        "volumeMounts": [
+          {
+            "mountPath": "/var/hyperledger/fabric-ca-credentials",
+            "name": "ca-credentials",
+            "readOnly": true
           },
           {
-            "name":  "FABRIC_CA_BOOTSTRAP_USERNAME",
-            "valueFrom": {
-              "secretKeyRef" : {
-                "name": "ca-credentials",
-                "key": "ca-admin-user"
-              }
-            }
-          },
-          {
-            "name":  "FABRIC_CA_BOOTSTRAP_PASSWORD",
-            "valueFrom": {
-              "secretKeyRef" : {
-                "name": "ca-credentials",
-                "key": "ca-admin-password"
-              }
-            }
-          },
-          {
-            "name":  "FABRIC_CA_SERVER_DB_TYPE",
-            "valueFrom": {
-              "secretKeyRef" : {
-                "name": "ca-server-db",
-                "key": "db-type"
-              }
-            }
-          },
-          {
-            "name":  "FABRIC_CA_SERVER_DB_DATASOURCE",
-            "valueFrom": {
-              "secretKeyRef" : {
-                "name": "ca-server-db",
-                "key": "datasource"
-              }
-            }
+            "mountPath": "/var/hyperledger/fabric-ca-server-db",
+            "name": "ca-server-db",
+            "readOnly": true
           }
         ],
         "workingDir": "/var/hyperledger"
@@ -90,6 +66,20 @@
     "imagePullSecrets": [
       {
         "name": "fabric-tools-secrets"
+      }
+    ],
+    "volumes": [
+      {
+        "name": "ca-credentials",
+        "secret": {
+          "secretName": "ca-credentials"
+        }
+      },
+      {
+        "name": "ca-server-db",
+        "secret": {
+          "secretName": "ca-server-db"
+        }
       }
     ]
   }

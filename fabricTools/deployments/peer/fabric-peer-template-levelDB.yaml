@@ -36,7 +36,7 @@ spec:
       - name: fabric-tools-secrets
       containers: 
       - name: peer{nodeNum} 
-        image: akvhlftemplate.azurecr.io/hyperledger/fabric-peer:1.4.4
+        image: hlfakstemplate.azurecr.io/hyperledger/fabric-peer:1.4.4
         env:
         - name: CORE_VM_ENDPOINT
           value: "unix:///host/var/run/docker.sock"
@@ -63,7 +63,10 @@ spec:
         - name: CORE_PEER_TLS_ROOTCERT_FILE
           value: "/var/hyperledger/peer/tls/ca.crt"
         - name: CORE_PEER_TLS_CLIENTAUTHREQUIRED
-          value: "true"
+          valueFrom:
+            configMapKeyRef:
+              name: mutual-tls
+              key: enabled
         - name: CORE_PEER_TLS_CLIENTCERT_FILE
           value: "/var/hyperledger/peer/tls/server.crt"
         - name: CORE_PEER_TLS_CLIENTKEY_FILE

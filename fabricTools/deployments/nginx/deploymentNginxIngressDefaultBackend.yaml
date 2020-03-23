@@ -21,7 +21,7 @@ spec:
       - name: fabric-tools-secrets
       containers:
         - name: nginx-ingress-default-backend
-          image: "akvhlftemplate.azurecr.io/nginx/nginx-defaultbackend:1.5"
+          image: "hlfakstemplate.azurecr.io/nginx/nginx-defaultbackend:1.5"
           imagePullPolicy: "IfNotPresent"
           args:
           securityContext:

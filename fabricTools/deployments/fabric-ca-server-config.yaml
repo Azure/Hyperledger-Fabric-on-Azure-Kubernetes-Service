@@ -130,7 +130,7 @@ registry:
   # Contains identity information which is used when LDAP is disabled
   identities:
      - name: {username}
-       pass: {password}
+       pass: "{password}"
        type: client
        affiliation: ""
        attrs:
@@ -156,8 +156,8 @@ db:
   type: {ca-server-db-type}
   datasource: {ca-server-db-datasource}
   tls:
-      enabled: false
-      certfiles:
+      enabled: true
+      certfiles: /etc/hyperledger/pgcerts/pg-ssl-rootcert.pem
       client:
         certfile:
         keyfile:
@@ -455,7 +455,7 @@ cfg:
 ###############################################################################
 operations:
     # host and port for the operations server
-    listenAddress: 127.0.0.1:9443
+    listenAddress: 0.0.0.0:9443
 
     # TLS configuration for the operations endpoint
     tls:

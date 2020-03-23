@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  ca.server: |
+    ca.svc.cluster.local:53 {
+        log
+        errors
+        cache 30
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+         }
+        forward .  /etc/resolv.conf
+    }

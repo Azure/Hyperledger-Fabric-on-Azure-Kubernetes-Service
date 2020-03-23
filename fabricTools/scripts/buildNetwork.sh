@@ -11,12 +11,14 @@ DEPLOYMENTS="/var/hyperledger/deployments"
 SCRIPTS="/var/hyperledger/scripts"
 
 . /var/hyperledger/scripts/utils.sh
-. /var/hyperledger/scripts/namespaces.sh
+. /var/hyperledger/scripts/globals.sh
 
 function deployNginx {
   echo
   echo "============ Starting Nginx controller ==============="
   echo
+  exportSecret fabric-tools-secrets ${toolsNamespace} ${nginxNamespace}
+
   kubectl apply -f $DEPLOYMENTS/nginx/serviceAccountNginxIngress.yaml -n ${nginxNamespace}
   res=$?
   verifyResult $res "Nginx service account creation failed!!!"
@@ -59,6 +61,16 @@ function deployNginx {
 
 function deployFabricCA
 {
+  if [[ ( ! -f "$CA_ADMIN_USERNAME_FILE" ) || ( ! -f $CA_ADMIN_PASSWORD_FILE ) || ( ! -f $CA_DB_TYPE_FILE ) || ( ! -f $CA_DB_DATASOURCE_FILE ) ]]; then
+      verifyResult 1 "Fabric CA secret not mounted properly!"
+  fi
+
+  caAdminUsername=$(cat $CA_ADMIN_USERNAME_FILE)
+  caAdminPassword=$(cat $CA_ADMIN_PASSWORD_FILE)
+  escapedForSedCaAdminPassword=${caAdminPassword/&/\\&}
+  caDbType=$(cat $CA_DB_TYPE_FILE)
+  caDbDatasource=$(cat $CA_DB_DATASOURCE_FILE)
+
   if [ -z "$(kubectl -n ${toolsNamespace} get secret hlf-ca-idcert -o jsonpath="{.data['rca\.pem']}")" ]; then
     echo
     echo "========== Generate Root Certificate for Fabric CA ============"
@@ -79,11 +91,23 @@ function deployFabricCA
     echo "$(kubectl -n ${toolsNamespace} get secret hlf-ca-idcert -o jsonpath="{.data['rca\.pem']}" | base64 -d)" > /tmp/fabric-ca/tls-certfile/rca.pem
     updateHlfStatus "Inprogress" "Root Certificate for Fabric CA provided by user"
   fi
-  sed -i -e "s/{username}/$FABRIC_CA_BOOTSTRAP_USERNAME/g" -e "s/{password}/$FABRIC_CA_BOOTSTRAP_PASSWORD/g" /var/hyperledger/deployments/fabric-ca-server-config.yaml
-  sed -i -e "s/{ca-server-db-type}/$FABRIC_CA_SERVER_DB_TYPE/g" -e "s/{ca-server-db-datasource}/$FABRIC_CA_SERVER_DB_DATASOURCE/g" /var/hyperledger/deployments/fabric-ca-server-config.yaml
+
+  sed -i -e "s/{username}/${caAdminUsername}/g" -e "s/{password}/${escapedForSedCaAdminPassword}/g" /var/hyperledger/deployments/fabric-ca-server-config.yaml
+  sed -i -e "s/{ca-server-db-type}/${caDbType}/g" -e "s/{ca-server-db-datasource}/${caDbDatasource}/g" /var/hyperledger/deployments/fabric-ca-server-config.yaml
   sed -i -e "s/{orgName}/$orgName/g" -e "s/{domainName}/$domainName/g" /var/hyperledger/deployments/fabric-ca-server-config.yaml
   kubectl -n ${caNamespace} create secret generic fabric-ca-server-config --from-file=fabric-ca-server-config.yaml="/var/hyperledger/deployments/fabric-ca-server-config.yaml"
-  
+ 
+  openssl x509 -checkend 0 -noout -in /var/hyperledger/deployments/pgcerts/pg-ssl-rootcert.pem
+  res=$?
+  if [ $res -eq 0 ]
+  then
+    kubectl -n ${caNamespace} create secret generic pg-ssl-rootcert --from-file=pg-ssl-rootcert.pem="/var/hyperledger/deployments/pgcerts/pg-ssl-rootcert.pem"
+    res=$?
+    verifyResult $res "Creation of secret for Postgres SSL root certificate failed!"
+  else
+    verifyResult $res "Postgres SSL root certificate Expired!"    
+  fi	  
+
   exportSecret fabric-tools-secrets ${toolsNamespace} ${caNamespace}
   exportSecret hlf-ca-idcert ${toolsNamespace} ${caNamespace}
   exportSecret hlf-ca-idkey ${toolsNamespace} ${caNamespace}
@@ -118,8 +142,11 @@ function deployNodes {
   exportSecret hlf-ca-idcert ${caNamespace} ${nodesNamespace}
   exportSecret hlf-tlsca-idcert ${caNamespace} ${nodesNamespace}
   exportSecret hlf-admin-idcert ${adminNamespace} ${nodesNamespace}
-  
-  
+
+  kubectl -n ${nodesNamespace} apply -f $DEPLOYMENTS/configmap-mutual-tls.yaml
+  res=$?
+  verifyResult $res "Creating configmap for triggering mutual TLS failed!"
+
   if [ "$nodeType" = "orderer" ]; then
       echo
       echo "=========== Generate configtx.yaml file =========="
@@ -205,7 +232,13 @@ deployFabricCA
 
 deployNginx
 
-waitCAServerUp "ca"
+# Enable log for CA DNS query
+kubectl apply -f $DEPLOYMENTS/ca-custom-coredns.yaml || true
+kubectl delete pod --namespace kube-system --selector k8s-app=kube-dns
+# wait for coreDNS to come up
+sleep 2m
+
+waitCAServerUp
 updateHlfStatus "Inprogress" "Fabric CA is UP"
 
 echo
