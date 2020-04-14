@@ -57,7 +57,8 @@ module.exports = {
         if (provisioningState.provisioningState === 'Validation') {
             // if we reached 'Validation' state, provisioning is not limited with function's timeout.
             // increase give up timeout, and give more time for fabric-tools container to bring up HLF network.
-            timeoutInMinutes = 20;
+            const { fabricToolsProvisionHlfTimeoutInMinutes } = require('./settings.json');
+            timeoutInMinutes = fabricToolsProvisionHlfTimeoutInMinutes;
 
             // check status from kubernetes cluster.
             const containerStatus = await getStatusFromFabricToolsContainer(context);

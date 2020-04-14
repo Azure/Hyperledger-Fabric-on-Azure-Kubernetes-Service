@@ -3,7 +3,10 @@
   "handler": "Microsoft.Azure.CreateUIDef",
   "version": "0.1.2-preview",
   "parameters": {
-    "resourceTypes": ["Microsoft.ContainerService/managedClusters", "Microsoft.DBforPostgreSQL/servers"],
+    "resourceTypes": [
+      "Microsoft.ContainerService/managedClusters",
+      "Microsoft.DBforPostgreSQL/servers"
+    ],
     "basics": [
       {
         "name": "resourcePrefix",
@@ -12,9 +15,9 @@
         "toolTip": "Prefix for naming of resources that will be deployed. This should be less than 6 characters in length, including lower case alpha and numbers only.",
         "defaultValue": "",
         "constraints": {
-            "required": true,
-            "regex": "^[a-z]{1}[a-z0-9]{0,5}$",
-            "validationMessage": "Resource prefix should be less than 6 characters in length, including lower case alphabets and numbers only. Prefix cannot start with a number."
+          "required": true,
+          "regex": "^[a-z]{1}[a-z0-9]{0,5}$",
+          "validationMessage": "Resource prefix should be less than 6 characters in length, including lower case alphabets and numbers only. Prefix cannot start with a number."
         }
       }
     ],
@@ -182,59 +185,59 @@
             "visible": true
           },
           {
-						"name": "hlfCaRootCertificates",
-						"type": "Microsoft.Common.OptionsGroup",
-						"label": "Certificates",
-						"defaultValue": "Fabric CA self-signed certificates",
-						"toolTip": "You can choose to provide your own root certificate or let the system generate self-signed certificates to initialize the Fabric CA (default)",
-						"constraints": {
-							"allowedValues": [
-								{
-									"label": "Fabric CA self-signed certificates",
-									"value": "SelfSigned"
-								},
-								{
-									"label": "Upload root certificate for Fabric CA",
-									"value": "Custom"
-								}
-							],
-							"required": false
-						},
-						"visible": true
-					},
-            {
-              "name": "hlfCaRootCertPublicKey",
-              "type": "Microsoft.Common.FileUpload",
-              "label": "Root Certificate",
-              "toolTip": "Upload root certificate(public key) with which Fabric CA needs to be initialized. Certificates of .pem format are supported ",
-              "constraints": {
-                  "required": true,
-                  "accept": ".pem"
-              },
-              "options": {
-                  "multiple": false,
-                  "uploadMode": "file",
-                  "openMode": "binary",
-                  "encoding": "UTF-8"
-              },
-              "visible": "[equals(steps('hlfConfig').hlfCaRootCertificates, 'Custom')]"
+            "name": "hlfCaRootCertificates",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Certificates",
+            "defaultValue": "Fabric CA self-signed certificates",
+            "toolTip": "You can choose to provide your own root certificate or let the system generate self-signed certificates to initialize the Fabric CA (default)",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Fabric CA self-signed certificates",
+                  "value": "SelfSigned"
+                },
+                {
+                  "label": "Upload root certificate for Fabric CA",
+                  "value": "Custom"
+                }
+              ],
+              "required": false
+            },
+            "visible": true
           },
           {
-              "name": "hlfCaRootCertPrivateKey",
-              "type": "Microsoft.Common.FileUpload",
-              "label": "Root Certificate private key",
-              "toolTip": "Upload the private key of the root certificate. If you have a .pem certificate which has both public and private key combined, upload it here as well",
-              "constraints": {
-                  "required": true,
-                  "accept": ".pem"
-              },
-              "options": {
-                  "multiple": false,
-                  "uploadMode": "file",
-                  "openMode": "binary",
-                  "encoding": "UTF-8"
-              },
-              "visible": "[equals(steps('hlfConfig').hlfCaRootCertificates, 'Custom')]"
+            "name": "hlfCaRootCertPublicKey",
+            "type": "Microsoft.Common.FileUpload",
+            "label": "Root Certificate",
+            "toolTip": "Upload root certificate(public key) with which Fabric CA needs to be initialized. Certificates of .pem format are supported ",
+            "constraints": {
+              "required": true,
+              "accept": ".pem"
+            },
+            "options": {
+              "multiple": false,
+              "uploadMode": "file",
+              "openMode": "binary",
+              "encoding": "UTF-8"
+            },
+            "visible": "[equals(steps('hlfConfig').hlfCaRootCertificates, 'Custom')]"
+          },
+          {
+            "name": "hlfCaRootCertPrivateKey",
+            "type": "Microsoft.Common.FileUpload",
+            "label": "Root Certificate private key",
+            "toolTip": "Upload the private key of the root certificate. If you have a .pem certificate which has both public and private key combined, upload it here as well",
+            "constraints": {
+              "required": true,
+              "accept": ".pem"
+            },
+            "options": {
+              "multiple": false,
+              "uploadMode": "file",
+              "openMode": "binary",
+              "encoding": "UTF-8"
+            },
+            "visible": "[equals(steps('hlfConfig').hlfCaRootCertificates, 'Custom')]"
           }
         ]
       },
@@ -273,16 +276,16 @@
                       "value": ""
                     },
                     {
-                      "label": "1.15.7",
-                      "value": "1.15.7"
+                      "label": "1.16.7",
+                      "value": "1.16.7"
+                    },
+                    {
+                      "label": "1.15.10",
+                      "value": "1.15.10"
                     },
                     {
                       "label": "1.14.8",
                       "value": "1.14.8"
-                    },
-                    {
-                      "label": "1.13.12",
-                      "value": "1.13.12"
                     }
                   ]
                 }
@@ -370,14 +373,14 @@
                 "toolTip": "Choose between a basic network configuration using kubenet with a default VNet, or an advanced configuration using Azure CNI with the option to customize your VNet.",
                 "constraints": {
                   "allowedValues": [
-                  {
-                    "label": "Advanced",
-                    "value": "Advanced"
-                  },
-                  {
-                    "label": "Basic",
-                    "value": "Basic"
-                  }
+                    {
+                      "label": "Advanced",
+                      "value": "Advanced"
+                    },
+                    {
+                      "label": "Basic",
+                      "value": "Basic"
+                    }
                   ],
                   "required": false
                 },
@@ -480,7 +483,8 @@
                 "visible": true,
                 "options": {
                   "icon": "Info",
-                  "text": "<p>To manually create a service principal with the Azure CLI follow the documentation <a href='https://docs.microsoft.com/en-us/azure/aks/kubernetes-service-principal#manually-create-a-service-principal' title='Title'>here</a></p>"}
+                  "text": "<p>To manually create a service principal with the Azure CLI follow the documentation <a href='https://docs.microsoft.com/en-us/azure/aks/kubernetes-service-principal#manually-create-a-service-principal' title='Title'>here</a></p>"
+                }
               },
               {
                 "name": "servicePrincipalClientId",
@@ -581,7 +585,7 @@
       "hlfUserName": "[steps('hlfConfig').hlfUserName]",
       "hlfCaPswd": "[steps('hlfConfig').hlfCaPswd]",
       "hlfCaRootCertPublicKey": "[steps('hlfConfig').hlfCaRootCertPublicKey.output]",
-			"hlfCaRootCertPrivateKey": "[steps('hlfConfig').hlfCaRootCertPrivateKey.output]",
+      "hlfCaRootCertPrivateKey": "[steps('hlfConfig').hlfCaRootCertPrivateKey.output]",
       "enableHttpApplicationRouting": "[steps('kubernetesConfig').kubeNetworking.publicIP]",
       "clusterName": "[steps('kubernetesConfig').clusterDetails.clusterName]",
       "kubernetesVersion": "[steps('kubernetesConfig').clusterDetails.kubernetesVersion]",
