@@ -1,5 +1,6 @@
 import * as Client from "fabric-client";
 import * as chalk from "chalk";
+import { URL } from "url";
 import { ConnectionProfileManager } from "../common/ConnectionProfileManager";
 import { MSPManager } from "../common/MSPManager";
 import { GatewayHelper } from "../common/GatewayHelper";
