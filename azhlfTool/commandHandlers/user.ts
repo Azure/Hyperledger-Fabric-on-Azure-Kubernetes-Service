@@ -179,6 +179,6 @@ export class ImportUserCommandHandler {
             await wallet.import(userName + WalletHelper.tlsIdentitySuffix, tlsidentity);
         }
 
-        console.log(`${userName} imported to wallet`);
+        console.log(chalk.green(`${userName} imported to wallet`));
     }
 }

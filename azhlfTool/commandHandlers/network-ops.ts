@@ -7,6 +7,7 @@ import { Constants } from "../common/Constants";
 import { Configtxlator, ConfigEnvelope, ProtobuffType } from "../FabricUtils/Configtxlator";
 import { ConfigHelper } from "../common/ConfigHelper";
 import { ObjectToString } from "../common/LogHelper";
+import { AnchorPeersSection, AnchorPeer } from "../common/ChannelConfigInterfaces";
 
 export class NetworkOperations {
     public async addPeerOrgToConsortium(peerOrg: string, ordererAdminName: string, ordererOrg: string): Promise<void> {
@@ -61,7 +62,7 @@ export class NetworkOperations {
             const configUpdate = await configtxlator.computeUpdate(Constants.SystemChannelName, ProtobuffType.CommonConfig, currentConfig, modifiedConfig);
 
             console.log("Sending configuration update transaction to orderer...");
-            // TODO: check if we can pass no signature
+
             const signature = ordererAdminClient.signChannelConfig(configUpdate);
             const signatures: Client.ConfigSignature[] = [signature];
 
@@ -276,17 +277,8 @@ export class NetworkOperations {
         if (channelName == Constants.SystemChannelName) {
             console.error(chalk.red("Invalid channel name"));
         }
-        // search for the orderer endpoint.
-        const ordererProfile = await new ConnectionProfileManager().getConnectionProfile(ordererOrg);
 
-        if (!ordererProfile.orderers || Object.keys(ordererProfile.orderers).length == 0) {
-            throw new Error("No orderers in connection profile.");
-        }
-
-        const ordererName = Object.keys(ordererProfile.orderers)[0];
-        const ordererClient = new Client();
-        ordererClient.loadFromConfig(ordererProfile);
-        const orderer = ordererClient.getOrderer(ordererName);
+        const orderer = await this.GetOrdererFromConnectionProfile(ordererOrg);
 
         // check, create and connect gateway.
         const peerProfile = await new ConnectionProfileManager().getConnectionProfile(peerOrg);
@@ -334,7 +326,155 @@ export class NetworkOperations {
         }
     }
 
+    public async SetPeerAsAnchorInChannel(channelName: string, anchorPeerNames: string[], peerAdminName: string, peerOrg: string, ordererOrg?: string): Promise<void> {
+        if (channelName == Constants.SystemChannelName) {
+            console.error(chalk.red("Invalid channel name"));
+        }
+
+        // check, create and connect gateway.
+        const peerProfile = await new ConnectionProfileManager().getConnectionProfile(peerOrg);
+        const gateway = await GatewayHelper.CreateGateway(peerAdminName, peerOrg, peerProfile);
+
+        try {
+            const peerAdminClient = gateway.getClient();
+
+            console.log("Preparing anchor peers list...");
+            const peerNodes = peerAdminClient.getPeersForOrg(peerOrg);
+            const anchorPeersToBeSet: AnchorPeer[] = [];
+            anchorPeerNames.forEach(anchorPeerNodeName => {
+                // get peer info from connection profile.
+                // check full name first and then try to find in ABS connection profile format: peer1.peerOrg
+                const peer = peerNodes.find(peerNode => peerNode.getName() === anchorPeerNodeName)
+                            || peerNodes.find(peerNode => peerNode.getName() === `${anchorPeerNodeName}.${peerOrg}`)
+                if(!peer){
+                    throw new Error(`Peer with name "${anchorPeerNodeName}" not found.`);
+                }
+
+                const peerUrl = new URL(peer.getUrl());
+                if(!peerUrl.hostname || !peerUrl.port){
+                    throw new Error(`Url for peer ${anchorPeerNodeName} should have host and port. Got ${peer.getUrl()}`);
+                }
+
+                const anchorPeer: AnchorPeer = {
+                    host: peerUrl.hostname,
+                    port: parseInt(peerUrl.port)
+                }
+
+                anchorPeersToBeSet.push(anchorPeer);
+            });
+
+            console.log("Retrieving channel's latest configuration block...");
+            // create channel and get orderer from connection profile (if ordererOrg provided) or from discovery results.
+            let channel: Client.Channel;
+            let orderer: Client.Orderer;
+            if(ordererOrg){
+                channel = peerAdminClient.newChannel(channelName);
+                orderer = await this.GetOrdererFromConnectionProfile(ordererOrg);
+                channel.addOrderer(orderer);
+            }
+            else {
+                try{
+                    const network = await gateway.getNetwork(channelName);
+                    channel = network.getChannel();
+                    orderer = channel.getOrderers()[0]; // there will be orderer always.
+                } catch (error) {
+                    console.error(error);
+                    console.error("If no one peer joined the requested channel - provide --ordererOrg parameter to command.");
+                    return;
+                }
+            }
+
+            const configEnvelope = await channel.getChannelConfigFromOrderer();
+
+            const configtxlator = new Configtxlator();
+            const currentConfigEnvelope = await configtxlator.decode<ConfigEnvelope>(configEnvelope.toBuffer(), ProtobuffType.CommonConfigenvelope);
+            const currentConfig = currentConfigEnvelope.config;
+
+            // clone current config
+            const modifiedConfig = JSON.parse(JSON.stringify(currentConfig));
+
+            if (!modifiedConfig.channel_group.groups.Application.groups[peerOrg]) {
+                console.log(`Organization ${peerOrg} is not in the channel.`);
+                return;
+            }
+
+            console.log("Verifying list of existing anchor peers...");
+            const anchorPeersSection : AnchorPeersSection =
+                modifiedConfig.channel_group.groups.Application.groups[peerOrg].values.AnchorPeers
+                || {mod_policy: "Admins", version: 0, value: {anchor_peers: []} }; // in case no anchor peers
+
+            // in case anchor peers section exist, but don't have anchor peers, value in returned config is null.
+            anchorPeersSection.value = anchorPeersSection.value || { anchor_peers: [] };
+
+            let configModified = anchorPeersToBeSet.length !== anchorPeersSection.value.anchor_peers.length;
+            anchorPeersToBeSet.forEach(newAnchorPeer => {
+                if(!anchorPeersSection.value.anchor_peers.find(existingAnchorPeer =>
+                           newAnchorPeer.host === existingAnchorPeer.host &&
+                           newAnchorPeer.port === existingAnchorPeer.port
+                )) {
+                    configModified = true;
+                }
+            });
+
+            if(!configModified){
+                console.log(chalk.yellow(`No changes in Anchor peers list. Exit.`));
+                return;
+            }
+
+            anchorPeersSection.value.anchor_peers = anchorPeersToBeSet;
+            modifiedConfig.channel_group.groups.Application.groups[peerOrg].values.AnchorPeers = anchorPeersSection;
+
+            console.log("Calculating configuration update...");
+            const configUpdate = await configtxlator.computeUpdate(channelName, ProtobuffType.CommonConfig, currentConfig, modifiedConfig);
+            const signature = peerAdminClient.signChannelConfig(configUpdate);
+            const signatures: Client.ConfigSignature[] = [signature];
+
+            console.log("Sending configuration update transaction...");
+            const txId = peerAdminClient.newTransactionID(true);
+            const request: Client.ChannelRequest = {
+                config: configUpdate,
+                name: channelName,
+                orderer,
+                signatures,
+                txId
+            };
+
+            // send request for update channel
+            const response = await peerAdminClient.updateChannel(request);
+            if (response.status != "SUCCESS") {
+                console.error(chalk.red(`Update ${channelName} failed with status ${response.status}.`));
+                console.error(`Response: ${response.info}`);
+                return;
+            }
+
+            if(anchorPeerNames.length){
+                console.log(`Successfully set anchor peers: [${chalk.green(anchorPeerNames.join(","))}] for the ${chalk.green(peerOrg)} on channel ${chalk.green(channelName)}!`);
+            }else{
+                console.log(`Successfully removed anchor peers for the ${chalk.green(peerOrg)} on channel ${chalk.green(channelName)}!`);
+            }
+
+        } finally {
+            gateway.disconnect();
+        }
+    }
+
     private FromBase64(base64encoded: string): string {
         return Buffer.from(base64encoded, "base64").toString("ascii");
+    }
+
+    private async GetOrdererFromConnectionProfile(ordererOrg: string): Promise<Client.Orderer> {
+        // search for the orderer endpoint.
+        const ordererProfile = await new ConnectionProfileManager().getConnectionProfile(ordererOrg);
+
+        if (!ordererProfile.orderers || Object.keys(ordererProfile.orderers).length == 0) {
+            throw new Error("No orderers in connection profile.");
+        }
+
+        const ordererName = Object.keys(ordererProfile.orderers)[0];
+        const ordererClient = new Client();
+        ordererClient.loadFromConfig(ordererProfile);
+        const orderer = ordererClient.getOrderer(ordererName);
+
+        return orderer;
     }
 }
