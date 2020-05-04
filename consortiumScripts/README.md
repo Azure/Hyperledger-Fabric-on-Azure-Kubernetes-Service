@@ -1,7 +1,7 @@
 # Build the consortium
 To build the blockchain consortium post deploying the ordering service and peer nodes, you will have to carry out the below steps in sequence. Build Your Network script ([byn.sh](https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/blob/master/consortiumScripts/byn.sh)) will help you with setting up the consortium, creating channel and installing chaincode.
 
-> **_NOTE:_** Build Your Network (byn.sh) script provided is strictly to be used for demo/devtest scenarios. For production grade setup we recommend using the native HLF APIs
+> **_Note:_** Build Your Network (byn.sh) script provided is strictly to be used for demo/devtest scenarios. For production grade setup we recommend using the native HLF APIs
 
 
 All the commands to run the byn script can be executed through Azure Bash CLI. You can login into Azure shell web version through <img src="https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/blob/master/images/azureCLI_Icon.png" width="35" height="35" /> option at the top right corner of the Azure portal. Once the command prompt comes up, type bash and enter to switch to bash CLI.
@@ -11,7 +11,7 @@ See ([Azure Shell](https://docs.microsoft.com/en-us/azure/cloud-shell/overview))
 <img src="https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/blob/master/images/azureCLI.png" />
 
 
-Download [byn.sh](https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/blob/master/consortiumScripts/byn.sh) and [fabric-admin.yaml](https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/blob/master/consortiumScripts/deployments/fabric-admin.yaml) file.
+Download [byn.sh](https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/blob/master/consortiumScripts/byn.sh) and [fabric-admin.yaml](https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/blob/master/consortiumScripts/fabric-admin.yaml) file.
 
 ```bash
 curl https://raw.githubusercontent.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/master/consortiumScripts/byn.sh -o byn.sh; chmod 777 byn.sh
@@ -108,4 +108,4 @@ PEER_NODE_NAME="peer<peer#>"
 ./byn.sh invokeDemoChaincode "$PEER_NODE_NAME" "$CHANNEL_NAME" "$ORDERER_END_POINT" "$AZURE_FILE_CONNECTION_STRING"
 ./byn.sh queryDemoChaincode "$PEER_NODE_NAME" "$CHANNEL_NAME"
 ```
-Please refer Run native HLF operations documentation [here](https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/tree/master/application/README.md) for running your own chaincode and creating new user identity.
+Refer Run native HLF operations documentation [here](https://github.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/tree/master/application/README.md) for running your own chaincode and creating new user identity.
