@@ -22,6 +22,20 @@ Organizations:
         ID: {ORG_NAME}
 
         MSPDir: msp
+ 
+        Policies:
+            Readers:
+                  Type: Signature
+                  Rule: "OR('${ORG_NAME}.member')"
+            Writers:
+                  Type: Signature
+                  Rule: "OR('${ORG_NAME}.member')"
+            Admins:
+                  Type: Signature
+                  Rule: "OR('${ORG_NAME}.admin')"
+            proposePolicy:
+                  Type: Signature
+                  Rule: "OR('${ORG_NAME}.client')"
 
         AnchorPeers:
             # AnchorPeers defines the location of peers which can be used
@@ -69,6 +83,9 @@ Application: &ApplicationDefaults
         Admins:
             Type: ImplicitMeta
             Rule: "ANY Admins"
+        proposePolicy:
+            Type: ImplicitMeta
+            Rule: "ANY proposePolicy"
 
     Capabilities:
         <<: *ApplicationCapabilities
@@ -111,6 +128,9 @@ Profiles:
         <<: *ChannelDefaults
         Application:
             <<: *ApplicationDefaults
+            ACLs:
+                <<: *ACLsDefault
+                peer/Propose: /Channel/Application/proposePolicy
             Organizations:
                 - *{ORG_NAME}
             Capabilities:
