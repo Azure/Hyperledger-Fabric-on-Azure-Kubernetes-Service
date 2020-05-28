@@ -1,0 +1,17 @@
+version: '2'
+
+services:
+   clifororderer:
+     container_name: clifororderer
+     image: hyperledger/fabric-tools:1.4.4
+     tty: true
+     stdin_open: true
+     environment:
+       - GOPATH=/var/hyperledger
+       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+     working_dir: /var/hyperledger
+     command: /bin/bash
+     volumes:
+         - /var/run/:/host/var/run/
+         - ./chaincode:/var/hyperledger/src/chaincode
+         - ./ordererCLIProfiles/ordererprofiles:/var/hyperledger/ordererprofiles

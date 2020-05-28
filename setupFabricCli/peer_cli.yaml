@@ -1,0 +1,18 @@
+version: '2'
+
+services:
+   cliforpeer:
+     container_name: cliforpeer
+     image: hyperledger/fabric-tools:1.4.4
+     tty: true
+     stdin_open: true
+     environment:
+       - GOPATH=/var/hyperledger
+       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+     working_dir: /var/hyperledger
+     command: /bin/bash
+     volumes:
+         - /var/run/:/host/var/run/
+         - ./chaincode:/var/hyperledger/src/chaincode
+         - ./peerCLIProfiles/peerprofiles:/var/hyperledger/peerprofiles
+         - ./peerCLIProfiles/ordererprofiles:/var/hyperledger/ordererprofiles
