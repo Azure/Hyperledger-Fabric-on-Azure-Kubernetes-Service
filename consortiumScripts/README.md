@@ -58,12 +58,27 @@ AZURE_FILE_CONNECTION_STRING="https://$STORAGE_ACCOUNT.file.core.windows.net/$ST
 ```
 
 ### 1. Channel Managment Commands
+#### Create channel command
 Go to orderer organization AKS cluster and issue command to create a new channel
 
 ```bash
 SWITCH_TO_AKS_CLUSTER $ORDERER_AKS_RESOURCE_GROUP $ORDERER_AKS_NAME $ORDERER_AKS_SUBSCRIPTION
 ./byn.sh createChannel "$CHANNEL_NAME"
 ```
+
+#### Setting anchor peer(s) command
+Go to peer organization AKS cluster and issue below command to set anchor peer(s) for the peer organization on the specified channel.
+
+> **_Note:_** Before executing this command, ensure that peer organization is added in the channel using Consortium management commands.
+
+```bash
+SWITCH_TO_AKS_CLUSTER $PEER_AKS_RESOURCE_GROUP $PEER_AKS_NAME $PEER_AKS_SUBSCRIPTION
+./byn.sh updateAnchorPeer <anchorPeersList> "$CHANNEL_NAME" "$ORDERER_END_POINT" "$AZURE_FILE_CONNECTION_STRING"
+```
+```anchorPeersList``` is a comma separated list of peer nodes to be set as an anchor peer. For example,
+- Set ```anchorPeersList``` as “peer1” if you want to set only peer1 node as anchor peer.
+- Set ```anchorPeersList``` as “peer1,peer3” if you want to set both peer1 and peer3 node as anchor peer.
+
 
 ### 2. Consortium Managment Commands
 Execute below commands in the given order to add a peer organization in a channel and consortium
