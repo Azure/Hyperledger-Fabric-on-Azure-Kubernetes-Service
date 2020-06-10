@@ -1,0 +1,36 @@
+{
+	"identities": [
+		{
+			"role": {
+				"name": "member",
+				"mspId": "exampleOrg1"
+			}
+		},
+		{
+			"role": {
+				"name": "member",
+				"mspId": "exampleOrg2"
+			}
+		},
+		{
+			"role": {
+				"name": "member",
+				"mspId": "exampleOrg3"
+			}
+		},
+		{
+			"role": {
+				"name": "member",
+				"mspId": "exampleOrg4"
+			}
+		}
+	],
+	"policy": {
+		"4-of": [
+			{ "signed-by": 0 },
+			{ "signed-by": 1 },
+			{ "signed-by": 2 },
+			{ "signed-by": 3 }
+		]
+	}
+}

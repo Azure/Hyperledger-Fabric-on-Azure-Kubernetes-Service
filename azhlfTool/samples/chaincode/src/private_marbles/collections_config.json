@@ -1,0 +1,59 @@
+[
+ {
+   "name": "collectionMarbles",
+   "policy": {
+            "identities": [
+                {
+                    "role": {
+                        "name": "member",
+                        "mspId": "peerOrg1"
+                    }
+                },
+                {
+                    "role": {
+                        "name": "member",
+                        "mspId": "peerOrg2"
+                    }
+                }
+            ],
+            "policy": {
+                "1-of": [
+                    {
+                        "signed-by": 0
+                    },
+                    {
+                        "signed-by": 1
+                    }
+                ]
+            }
+        },
+   "requiredPeerCount": 1,
+   "maxPeerCount": 3,
+   "blockToLive":1000000,
+   "memberOnlyRead": true
+},
+ {
+   "name": "collectionMarblePrivateDetails",
+   "policy": {
+            "identities": [
+                {
+                    "role": {
+                        "name": "member",
+                        "mspId": "peerOrg1"
+                    }
+                }
+            ],
+            "policy": {
+                "1-of": [
+                    {
+                        "signed-by": 0
+                    }
+                ]
+            }
+        },
+   "requiredPeerCount": 1,
+   "maxPeerCount": 3,
+   "blockToLive":30000,
+   "memberOnlyRead": true
+ }
+]

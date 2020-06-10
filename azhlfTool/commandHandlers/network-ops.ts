@@ -279,7 +279,7 @@ export class NetworkOperations {
             console.error(chalk.red("Invalid channel name"));
         }
 
-        const orderer = await this.GetOrdererFromConnectionProfile(ordererOrg);
+        const orderer = await this.GetOrdererFromConnectionProfile(ordererOrg, peerAdminName, peerOrg);
 
         // check, create and connect gateway.
         const peerProfile = await new ConnectionProfileManager().getConnectionProfile(peerOrg);
@@ -321,7 +321,11 @@ export class NetworkOperations {
                 }
             });
 
-            console.log(success ? chalk.green(`Successfully joined all peers of ${peerOrg} to channel ${channelName}.`) : chalk.red(`Join peers of ${peerOrg} to channel ${channelName} failed.`));
+            console.log(
+                success
+                    ? chalk.green(`Successfully joined all peers of ${peerOrg} to channel ${channelName}.`)
+                    : chalk.red(`Join peers of ${peerOrg} to channel ${channelName} failed.`)
+            );
         } finally {
             gateway.disconnect();
         }
@@ -352,14 +356,14 @@ export class NetworkOperations {
                 }
 
                 const peerUrl = new URL(peer.getUrl());
-                if(!peerUrl.hostname || !peerUrl.port){
+                if (!peerUrl.hostname || !peerUrl.port) {
                     throw new Error(`Url for peer ${anchorPeerNodeName} should have host and port. Got ${peer.getUrl()}`);
                 }
 
                 const anchorPeer: AnchorPeer = {
                     host: peerUrl.hostname,
-                    port: parseInt(peerUrl.port)
-                }
+                    port: parseInt(peerUrl.port),
+                };
 
                 anchorPeersToBeSet.push(anchorPeer);
             });
@@ -368,13 +372,12 @@ export class NetworkOperations {
             // create channel and get orderer from connection profile (if ordererOrg provided) or from discovery results.
             let channel: Client.Channel;
             let orderer: Client.Orderer;
-            if(ordererOrg){
+            if (ordererOrg) {
                 channel = peerAdminClient.newChannel(channelName);
-                orderer = await this.GetOrdererFromConnectionProfile(ordererOrg);
+                orderer = await this.GetOrdererFromConnectionProfile(ordererOrg, peerAdminName, peerOrg);
                 channel.addOrderer(orderer);
-            }
-            else {
-                try{
+            } else {
+                try {
                     const network = await gateway.getNetwork(channelName);
                     channel = network.getChannel();
                     orderer = channel.getOrderers()[0]; // there will be orderer always.
@@ -400,9 +403,11 @@ export class NetworkOperations {
             }
 
             console.log("Verifying list of existing anchor peers...");
-            const anchorPeersSection : AnchorPeersSection =
-                modifiedConfig.channel_group.groups.Application.groups[peerOrg].values.AnchorPeers
-                || {mod_policy: "Admins", version: 0, value: {anchor_peers: []} }; // in case no anchor peers
+            const anchorPeersSection: AnchorPeersSection = modifiedConfig.channel_group.groups.Application.groups[peerOrg].values.AnchorPeers || {
+                mod_policy: "Admins",
+                version: 0,
+                value: { anchor_peers: [] },
+            }; // in case no anchor peers
 
             // in case anchor peers section exist, but don't have anchor peers, value in returned config is null.
             anchorPeersSection.value = anchorPeersSection.value || { anchor_peers: [] };
@@ -417,7 +422,7 @@ export class NetworkOperations {
                 }
             });
 
-            if(!configModified){
+            if (!configModified) {
                 console.log(chalk.yellow(`No changes in Anchor peers list. Exit.`));
                 return;
             }
@@ -448,12 +453,11 @@ export class NetworkOperations {
                 return;
             }
 
-            if(anchorPeerNames.length){
+            if (anchorPeerNames.length) {
                 console.log(`Successfully set anchor peers: [${chalk.green(anchorPeerNames.join(","))}] for the ${chalk.green(peerOrg)} on channel ${chalk.green(channelName)}!`);
-            }else{
+            } else {
                 console.log(`Successfully removed anchor peers for the ${chalk.green(peerOrg)} on channel ${chalk.green(channelName)}!`);
             }
-
         } finally {
             gateway.disconnect();
         }
@@ -463,7 +467,7 @@ export class NetworkOperations {
         return Buffer.from(base64encoded, "base64").toString("ascii");
     }
 
-    private async GetOrdererFromConnectionProfile(ordererOrg: string): Promise<Client.Orderer> {
+    private async GetOrdererFromConnectionProfile(ordererOrg: string, userName: string, userOrg: string): Promise<Client.Orderer> {
         // search for the orderer endpoint.
         const ordererProfile = await new ConnectionProfileManager().getConnectionProfile(ordererOrg);
 
@@ -472,10 +476,12 @@ export class NetworkOperations {
         }
 
         const ordererName = Object.keys(ordererProfile.orderers)[0];
-        const ordererClient = new Client();
-        ordererClient.loadFromConfig(ordererProfile);
-        const orderer = ordererClient.getOrderer(ordererName);
 
+        // Gateway is needed to get client with user certificates which will be used to access to the orderer.
+        // We don't connect to network, so gateway.disconnect() is not needed.
+        const ordererGateway = await GatewayHelper.CreateGateway(userName, userOrg, ordererProfile);
+        const ordererClient = ordererGateway.getClient();
+        const orderer = ordererClient.getOrderer(ordererName);
         return orderer;
     }
 }

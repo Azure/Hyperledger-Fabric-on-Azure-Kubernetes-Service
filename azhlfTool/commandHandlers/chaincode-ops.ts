@@ -1,9 +1,11 @@
 import { ConnectionProfileManager } from "../common/ConnectionProfileManager";
 import { GatewayHelper } from "../common/GatewayHelper";
-import { sep as pathSep, isAbsolute as isAbsolutePath } from "path";
+import { sep as pathSeparator, isAbsolute as isAbsolutePath } from "path";
+import {pathExists, readJSON} from "fs-extra";
 import * as Client from "fabric-client";
 import * as chalk from "chalk";
 import { ObjectToString } from "../common/LogHelper";
+import { TransientMap } from "fabric-network";
 
 export class ChaincodeOperations {
     public async InstallChaincode(
@@ -20,7 +22,7 @@ export class ChaincodeOperations {
 
         const systemGoPath = process.env.GOPATH;
         if (chaincodeType == "golang") {
-            const pathSegments = chaincodePath.split(pathSep);
+            const pathSegments = chaincodePath.split(pathSeparator);
             // for golang it is required to have path with 'src'
             const indexOfSrc = pathSegments.lastIndexOf("src");
             if (indexOfSrc < 1 || indexOfSrc >= pathSegments.length - 1) {
@@ -30,8 +32,8 @@ export class ChaincodeOperations {
             }
 
             // and the we need to split path to two segments before src and after src (excluding src).
-            process.env.GOPATH = pathSegments.slice(0, indexOfSrc).join(pathSep);
-            chaincodePath = pathSegments.slice(indexOfSrc + 1).join(pathSep);
+            process.env.GOPATH = pathSegments.slice(0, indexOfSrc).join(pathSeparator);
+            chaincodePath = pathSegments.slice(indexOfSrc + 1).join(pathSeparator);
         }
 
         const profile = await new ConnectionProfileManager().getConnectionProfile(peerOrganization);
@@ -91,9 +93,18 @@ export class ChaincodeOperations {
         chaincodeVersion: string,
         func: string | undefined,
         args: string[] | undefined,
+        collectionsConfigPath: string | undefined,
+        transientDataJson: string | undefined,
+        policyConfigPath: string | undefined,
         peerOrganization: string,
         peerAdminName: string
     ): Promise<void> {
+
+        let policy = undefined;
+        if(policyConfigPath){
+            policy = await this.GetPolicy(policyConfigPath);
+        }
+
         const peerProfile = await new ConnectionProfileManager().getConnectionProfile(peerOrganization);
         const gateway = await GatewayHelper.CreateGateway(peerAdminName, peerOrganization, peerProfile);
 
@@ -128,8 +139,14 @@ export class ChaincodeOperations {
                 fcn: func,
                 args,
                 targets: [peerNode],
+                "collections-config":collectionsConfigPath,
+                "endorsement-policy": policy,
                 txId
             };
+
+            if(transientDataJson){
+                instantiateRequest.transientMap = this.JsonToTransientMap(transientDataJson);
+            }
 
             console.log("Sending instantiate proposal request...");
             const instantiateProposalResponse = await channel.sendInstantiateProposal(instantiateRequest);
@@ -176,6 +193,7 @@ export class ChaincodeOperations {
         chaincodeName: string,
         func: string,
         args: string[],
+        transientDataJson: string | undefined,
         clientUserName: string,
         peerOrganization: string
     ): Promise<void> {
@@ -184,10 +202,15 @@ export class ChaincodeOperations {
 
         try {
             const network = await gateway.getNetwork(channelName);
-            // Get the contract from the network.
             const contract = network.getContract(chaincodeName);
+            let transaction = contract.createTransaction(func);
 
-            const contractResponse = await contract.submitTransaction(func, ...args);
+            if(transientDataJson){
+                const transientDataMap = this.JsonToTransientMap(transientDataJson);
+                transaction = transaction.setTransient(transientDataMap);
+            }
+
+            const contractResponse = await transaction.submit(...args);
 
             console.log(`Chaincode ${chaincodeName} successfully invoked on channel ${channelName}.`);
             if (contractResponse.toString()) {
@@ -248,5 +271,38 @@ export class ChaincodeOperations {
         });
 
         return instantiated;
+    }
+
+    private JsonToTransientMap(transientDataJson: string): TransientMap {
+        const transientDataMap: TransientMap = {};
+
+        const transientData = JSON.parse(transientDataJson);
+        for (let k of Object.keys(transientData)) {
+            if(typeof transientDataMap[k] === "string") // to avoid double serialization of string
+            {
+                transientDataMap[k] = Buffer.from(transientData[k]);
+            }
+            else
+            {
+                transientDataMap[k] = Buffer.from(JSON.stringify(transientData[k]));
+            }
+        }
+
+        return transientDataMap;
+    }
+
+    private async GetPolicy(policyConfigPath: string): Promise<object> {
+        if (!isAbsolutePath(policyConfigPath)) {
+            throw new Error("Please provide absolute path to the policy file.");
+        }
+
+        if(! await pathExists(policyConfigPath))
+        {
+            throw new Error(`Could not find file with provided path: ${policyConfigPath}`);
+        }
+
+        const policy = await readJSON(policyConfigPath);
+
+        return policy;
     }
 }

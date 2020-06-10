@@ -4,8 +4,9 @@ import * as yargs from "yargs";
 yargs
     .commandDir("commandDefs")
     .demandCommand()
+    .strict()
     .scriptName(process.platform == "win32" ? "azhlf" : "./azhlf")
     .help(false)
     .version(false)
-    .wrap(Math.min(120, yargs.terminalWidth()))
+    .wrap(yargs.terminalWidth())
     .parse();

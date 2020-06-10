@@ -1,0 +1,44 @@
+{
+	"identities": [
+		{
+			"role": {
+				"name": "member",
+				"mspId": "exampleOrg1"
+			}
+		},
+		{
+			"role": {
+				"name": "member",
+				"mspId": "exampleOrg2"
+			}
+		},
+		{
+			"role": {
+				"name": "member",
+				"mspId": "exampleOrg3"
+			}
+		}
+	],
+	"policy": {
+		"1-of": [
+			{
+				"2-of": [
+					{ "signed-by": 0 },
+            		{ "signed-by": 1 }
+				]
+			},
+			{
+				"2-of": [
+					{ "signed-by": 0 },
+            		{ "signed-by": 2 }
+				]
+			},
+			{
+				"2-of": [
+					{ "signed-by": 1 },
+            		{ "signed-by": 2 }
+				]
+			}
+		]
+	}
+}
