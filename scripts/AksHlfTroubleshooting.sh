@@ -1,8 +1,17 @@
 #!/bin/bash
+function printErrorMessage() {
+    echo "Usage:"
+    echo -e "./AksHlfTroubleshooting.sh <subscriptionID> <resourceGroup> <aksClusterName> <organizationType>"
+    echo "Arguments:"
+    echo -e "\tsubscriptionID    : Subscription ID of AKS-HLF template deployment"
+    echo -e "\tresourceGroup     : Resource group of AKS-HLF template deployment"
+    echo -e "\taksClusterName    : AKS Cluster name"
+    echo -e "\torganizationType  : Specify \"peer\" for peer organization and \"orderer\" for orderer organization"
+}
+
 if [ $# -ne 4 ]; then
-    echo "Invalid arguments passed to the script!!"
-    echo "Please execute script with the followinf arguments:"
-    echo "./AksHlfTroubleshooting.sh <subscriptioID> <resourceGroup> <aksClusterName> <organizationType>"
+    echo "Invalid arguments count!!"
+    printErrorMessage
     exit 1
 fi
 subscriptionID=$1
@@ -11,6 +20,12 @@ aksClusterName=$3
 organizationType=$4
 
 az aks get-credentials -g $resourceGroup -n $aksClusterName --subscription $subscriptionID
+res=$?
+if [ $res -ne 0 ]; then
+    echo "Invalid arguments value!!"
+    printErrorMessage
+    exit 1
+fi
 echo "Connected to the cluster..."
 
 nodeCount=$(kubectl get configmap -n hlf-admin org-detail -o jsonpath={.data.nodeCount})
@@ -34,7 +49,7 @@ echo "Collected organization metadata..."
     for (( i=1; i<=$nodeCount; i++ ))
     do
         echo "------- Start: $organizationType$i node description -------------"
-        kubectl describe pod --selector="name=peer$i" -n hlf 
+        kubectl describe pod --selector="name=peer$i" -n hlf
         echo "------- End: $organizationType$i node description -------------"
 
         echo "------- Start: $organizationType$i node logs -------------"
@@ -53,7 +68,7 @@ echo "Collected hlf nodes logs..."
     echo "================= NGINX LOGS ================"
     kubectl get all -n nginx
     echo "------- Start: nginx controller logs -------------"
-    kubectl logs $(kubectl get pods -l "app=nginx-ingress" -ojsonpath={.items[0].metadata.name} -n nginx) -n nginx 
+    kubectl logs $(kubectl get pods -l "app=nginx-ingress" -ojsonpath={.items[0].metadata.name} -n nginx) -n nginx
     echo "------- End: nginx controller logs -------------"
 } > $outputPath/nginx.output
 echo "Collected nginx logs..."
