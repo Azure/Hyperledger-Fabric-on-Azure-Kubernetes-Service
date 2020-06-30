@@ -225,26 +225,67 @@ export class ChaincodeOperations {
 
     public async QueryChaincode(
         channelName: string,
+        endorsingPeers: string[],
         chaincodeName: string,
         func: string,
         args: string[],
         clientUserName: string,
         peerOrganization: string
     ): Promise<void> {
+        // If endorsingPeers is empty then exit with error
+        if (!(Array.isArray(endorsingPeers) && endorsingPeers.length)) {
+            console.error(`Invalid argument. Endorsing peer list should not be empty.`);
+            throw "exit";
+        }
+
         const profile = await new ConnectionProfileManager().getConnectionProfile(peerOrganization);
         const gateway = await GatewayHelper.CreateGateway(clientUserName, peerOrganization, profile);
 
         try {
             const network = await gateway.getNetwork(channelName);
-            // Get the contract from the network.
-            const contract = network.getContract(chaincodeName);
-            const contractResponse = await contract.evaluateTransaction(func, ...args);
+            
+            // Get all the peers that are part of this peer organization
+            let peerList = gateway.getClient().getPeersForOrg();
 
-            console.log(`Chaincode ${chaincodeName} successfully queried on channel ${channelName}.`);
-            if (contractResponse.toString()) {
-                console.log(`response from chaincode: ${contractResponse.toString()}`);
-            } else {
-                console.log(`Got empty response.`);
+            // Create Peer array corresponding to required endorsing peers
+            let endorsingPeerObjects = [];
+            for (let i=0; i<endorsingPeers.length; i++) {
+                for (let j=0; j<peerList.length; j++) {
+                    let currentPeer = endorsingPeers[i] + "." + peerOrganization;
+                    if (currentPeer === peerList[j].getName()) {
+                        endorsingPeerObjects.push(peerList[j]);
+                    }
+                }
+            }
+
+            // Throw error if no matching endorsing peers were found
+            if (!(Array.isArray(endorsingPeerObjects) && endorsingPeerObjects.length)) {
+                console.error("No peers found with given endorsing peer name(s).");
+                throw "exit";
+            }
+
+            // Use channel object to send query request to target peers
+            const channel = network.getChannel();
+
+            // Create query request object
+            let request: Client.ChaincodeQueryRequest = <Client.ChaincodeQueryRequest>{
+                targets: endorsingPeerObjects,
+                chaincodeId: chaincodeName,
+                fcn: func,
+                args: args,
+                request_timeout: 300000
+            };
+
+            // Send query request to provided endorsing peers
+            let responsePayloads = await channel.queryByChaincode(request);
+
+            // Process the response payloads received from different peers
+            for (let i = 0; i < responsePayloads.length; i++) {
+                if (responsePayloads[i].toString()) {
+                   console.log(`Query result from peer: ${endorsingPeers[i]} is: ${responsePayloads[i].toString()}`);
+                } else {
+                    console.log(`Got empty query result from peer: ${endorsingPeers[i]}`);
+                }
             }
         } finally {
             gateway.disconnect();
