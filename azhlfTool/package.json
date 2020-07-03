@@ -11,7 +11,7 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 0",
     "postinstall": "tsc ./FabricUtils/UtilsDownloader.ts && node ./FabricUtils/UtilsDownloader.js",
     "setup": "run-script-os",
-    "setup:linux": "npm run build && ln -s ./out/cli.js azhlf && chmod +x azhlf",
+    "setup:linux:darwin": "npm run build && ln -s ./out/cli.js azhlf && chmod +x azhlf",
     "setup:win32": "npm run build"
   },
   "author": "Microsoft",
