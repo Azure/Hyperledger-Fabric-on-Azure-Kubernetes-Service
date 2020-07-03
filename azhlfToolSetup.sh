@@ -3,6 +3,8 @@
 echo
 echo "===> Cloning azhlf Tool ..."
 echo
+mkdir -p azhlf
+cd azhlf
 git init
 git config core.sparsecheckout true
 echo "azhlfTool" > .git/info/sparse-checkout
