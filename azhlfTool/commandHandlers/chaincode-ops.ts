@@ -282,7 +282,7 @@ export class ChaincodeOperations {
             // Process the response payloads received from different peers
             for (let i = 0; i < responsePayloads.length; i++) {
                 if (responsePayloads[i].toString()) {
-                   console.log(`Query result from peer: ${endorsingPeers[i]} is: ${responsePayloads[i].toString()}`);
+                    console.log(`${endorsingPeers[i]} gave response from chaincode: ${responsePayloads[i].toString()}`);
                 } else {
                     console.log(`Got empty query result from peer: ${endorsingPeers[i]}`);
                 }
