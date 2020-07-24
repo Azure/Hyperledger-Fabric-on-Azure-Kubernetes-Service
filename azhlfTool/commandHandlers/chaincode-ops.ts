@@ -102,7 +102,7 @@ export class ChaincodeOperations {
 
         let policy = undefined;
         if(policyConfigPath){
-            policy = await this.GetPolicy(policyConfigPath);
+            policy = await this.GetPolicy(policyConfigPath) as Client.EndorsementPolicy;
         }
 
         const peerProfile = await new ConnectionProfileManager().getConnectionProfile(peerOrganization);

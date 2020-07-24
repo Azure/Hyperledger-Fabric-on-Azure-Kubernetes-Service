@@ -6,6 +6,7 @@ import { ConnectionProfileManager } from "../common/ConnectionProfileManager";
 import { GatewayHelper } from "../common/GatewayHelper";
 import * as FabricCAServices from "fabric-ca-client";
 import * as chalk from "chalk";
+import { User} from 'fabric-common';
 
 export interface ImportUserData {
     wallet: string;
@@ -79,7 +80,7 @@ export class ImportUserCommandHandler {
 
         // do operations
         try {
-            const admin = gateway.getCurrentIdentity();
+	    const admin = gateway.getCurrentIdentity() as unknown as User;
             const ca = gateway.getClient().getCertificateAuthority();
             const registerRequest: FabricCAServices.IRegisterRequest = {
                 enrollmentID: userName,
