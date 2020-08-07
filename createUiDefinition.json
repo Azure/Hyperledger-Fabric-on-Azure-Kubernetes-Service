@@ -273,7 +273,7 @@
                   "allowedValues": [
                     {
                       "label": "default",
-                      "value": ""
+                      "value": "default"
                     },
                     {
                       "label": "1.16.7",
@@ -588,7 +588,7 @@
       "hlfCaRootCertPrivateKey": "[steps('hlfConfig').hlfCaRootCertPrivateKey.output]",
       "enableHttpApplicationRouting": "[steps('kubernetesConfig').kubeNetworking.publicIP]",
       "clusterName": "[steps('kubernetesConfig').clusterDetails.clusterName]",
-      "kubernetesVersion": "[steps('kubernetesConfig').clusterDetails.kubernetesVersion]",
+      "kubernetesVersion": "[replace(steps('kubernetesConfig').clusterDetails.kubernetesVersion, 'default', '')]",
       "dnsPrefix": "[steps('kubernetesConfig').clusterDetails.dnsPrefix]",
       "agentVMSize": "[steps('kubernetesConfig').clusterDetails.agentVMSize]",
       "agentCount": "[int(steps('kubernetesConfig').clusterDetails.agentCount)]",

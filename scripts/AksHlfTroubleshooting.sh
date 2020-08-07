@@ -22,13 +22,13 @@ function collectHlfNodesLogs() {
 
             echo "------- End: $organizationType$i node description -------------"
     
-            containers=($(kubectl get pods -l "name=$organizationType$i" -n hlf -o jsonpath={.items[*].spec.containers[*].name}))
-            podName=$(kubectl get pods -l "name=$organizationType$i" -ojsonpath={.items[0].metadata.name} -n hlf)
-            for container in "${containers[@]}"; do
+	    containers=($(kubectl get pods -l "name=$organizationType$i" -n hlf -o jsonpath={.items[*].spec.containers[*].name}))
+	    podName=$(kubectl get pods -l "name=$organizationType$i" -ojsonpath={.items[0].metadata.name} -n hlf)
+	    for container in "${containers[@]}"; do
               echo "------- Start: $organizationType$i node $container container logs -------------"
               kubectl logs $podName -n hlf -c $container
               echo "------- End: $organizationType$i node $container container logs -------------"
-            done
+	    done
         done
     } > $outputPath/nodes.output
     echo "End collecting hlf nodes logs..."

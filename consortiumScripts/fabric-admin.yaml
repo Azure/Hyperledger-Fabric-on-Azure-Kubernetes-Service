@@ -32,7 +32,7 @@ spec:
         - name: fabric-tools-secrets
       containers:
       - name: fabric-admin
-        image: hlfakstemplate.azurecr.io/fabric-tools:2.1.0
+        image: hlfakstemplate.azurecr.io/fabric-tools:2.2.0
         stdin: true
         tty: true
         command: ["/bin/bash"]

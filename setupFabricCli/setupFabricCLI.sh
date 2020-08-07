@@ -3,15 +3,14 @@
 printPeerCommandHelp() {
     echo
     echo "======= Please provide the following arguments correctly (in order): ======="
-    echo -e "\tPeer Admin Profile Path"
+    echo -e "\tPeer Admin Credentials Path"
     echo -e "\t\t- You can download the Admin Credentials JSON file from Azure Portal UI, by selecting your Blockchain Resource > Overview pane > Admin Credentials."
     echo
     echo -e "\tPeer Connection Profile Path"
     echo -e "\t\t- You can download the Connection Profile JSON file from Azure Portal UI, by selecting your Blockchain Resource > Overview pane > Connection Profile."
     echo
-    echo -e "\tPeer MSP JSON Profile Path"
-    echo -e "\t\t- You can use \"azhlf\" tool to fetch the MSP Profile JSON using the following command:"
-    echo -e "\t\t- ./azhlf msp import fromAzure -g \$PEER_ORG_RESOURCE_GROUP -s \$PEER_ORG_SUBSCRIPTION -o \$PEER_ORG_NAME"
+    echo -e "\tPeer MSP Configuration Path"
+    echo -e "\t\t- You can download the MSP Configuration JSON file from Azure Portal UI, by selecting your Blockchain Resource > Overview pane > MSP Configuration."
     echo
     echo -e "\tPeer node name: e.g. \"peer<peer#>\""
     echo
@@ -24,29 +23,28 @@ printPeerCommandHelp() {
     echo
     peerProfileRootPath=/var/hyperledger/profiles/peerprofiles/peerOrg
     ordererProfileRootPath=/var/hyperledger/profiles/peerprofiles/ordererOrg
-    echo -e "\tsource setupFabricCLI.sh \"peer\" ${peerProfileRootPath}/peerOrg_AdminCredential.json ${peerProfileRootPath}/peerOrg_ConnectionProfile.json ${peerProfileRootPath}/peerOrg.json \"peer1\" ${ordererProfileRootPath}/ordererOrg_ConnectionProfile.json \"orderer1\""
+    echo -e "\tsource setupFabricCLI.sh \"peer\" ${peerProfileRootPath}/peerOrg_AdminCredential.json ${peerProfileRootPath}/peerOrg_ConnectionProfile.json ${peerProfileRootPath}/peerOrg_MSPConfiguration.json \"peer1\" ${ordererProfileRootPath}/ordererOrg_ConnectionProfile.json \"orderer1\""
     echo
 }
 
 printOrdererCommandHelp() {
     echo
     echo "======= Please provide the following arguments correctly (in order): ======="
-    echo -e "\tOrderer Admin Profile Path"
+    echo -e "\tOrderer Admin Credentials Path"
     echo -e "\t\t- You can download the Admin Credentials JSON file from Azure Portal UI, by selecting your Blockchain Resource > Overview pane > Admin Credentials."
     echo
     echo -e "\tOrderer Connection Profile Path"
     echo -e "\t\t- You can download the Connection Profile JSON file from Azure Portal UI, by selecting your Blockchain Resource > Overview pane > Connection Profile."
     echo
-    echo -e "\tOrderer MSP JSON Profile Path"
-    echo -e "\t\t- You can use \"azhlf\" tool to fetch the MSP Profile JSON using the following command:"
-    echo -e "\t\t- ./azhlf msp import fromAzure -g \$ORDERER_ORG_RESOURCE_GROUP -s \$ORDERER_ORG_SUBSCRIPTION -o \$ORDERER_ORG_NAME"
+    echo -e "\tOrderer MSP Configuration Path"
+    echo -e "\t\t- You can download the MSP Configuration JSON file from Azure Portal UI, by selecting your Blockchain Resource > Overview pane > MSP Configuration."
     echo
     echo -e "\tOrderer node name: e.g. \"orderer<orderer#>\""
     echo
     echo "======= Example: ======="
     echo
     ordererProfileRootPath=/var/hyperledger/profiles/ordererprofiles/ordererOrg
-    echo -e "\tsource setupFabricCLI.sh \"orderer\" ${ordererProfileRootPath}/ordererOrg_AdminCredential.json ${ordererProfileRootPath}/ordererOrg_ConnectionProfile.json ${ordererProfileRootPath}/ordererOrg.json \"orderer1\""
+    echo -e "\tsource setupFabricCLI.sh \"orderer\" ${ordererProfileRootPath}/ordererOrg_AdminCredential.json ${ordererProfileRootPath}/ordererOrg_ConnectionProfile.json ${ordererProfileRootPath}/ordererOrg_MSPConfiguration.json \"orderer1\""
     echo
 }
 
@@ -99,7 +97,8 @@ createOrgMSP() {
     cat ${mspProfilePath} | jq '.cacerts' | tr -d '"' | base64 -d > ./${nodeType}/${orgName}/msp/cacerts/rca.pem
 
     #tlscacerts
-    cat ${connectionProfilePath} | jq '.'$nodeType's."'$nodeName'.'${orgName}'".tlsCACerts.pem' | tr -d '"' | sed 's/\\n/\n/g' > ./${nodeType}/${orgName}/msp/tlscacerts/ca.crt
+    cat ${connectionProfilePath} | jq '.'$nodeType's."'$nodeName'.'${orgName}'".tlsCACerts.pem' | tr -d '"' | sed 's/\\n/\n/g' > \
+    ./${nodeType}/${orgName}/msp/tlscacerts/ca.crt
 
     #signcerts
     cp ./${nodeType}/${orgName}/msp/admincerts/cert.pem ./${nodeType}/${orgName}/msp/signcerts/cert.pem
@@ -119,7 +118,8 @@ createOrdererTLSCA() {
     mkdir -p ./orderer/${ordererOrgName}/msp/tlscacerts
 
     #tlscacerts
-    cat ${ordererConnectionProfilePath} | jq '.orderers."'$ordererNodeName'.'${ordererOrgName}'".tlsCACerts.pem' | tr -d '"' | sed 's/\\n/\n/g' > ./orderer/${ordererOrgName}/msp/tlscacerts/ca.crt
+    cat ${ordererConnectionProfilePath} | jq '.orderers."'$ordererNodeName'.'${ordererOrgName}'".tlsCACerts.pem' | tr -d '"' | sed 's/\\n/\n/g' > \
+    ./orderer/${ordererOrgName}/msp/tlscacerts/ca.crt
 }
 
 setEnvVars() {
