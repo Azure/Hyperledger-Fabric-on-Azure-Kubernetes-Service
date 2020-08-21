@@ -1,8 +1,9 @@
-import Axios, { AxiosRequestConfig } from "axios";
+import Axios, { AxiosResponse, AxiosRequestConfig } from "axios";
 import * as chalk from "chalk";
+import { Agent } from "https";
 import { ResourceManagementClient } from "@azure/arm-resources";
-import { interactiveLogin, AzureCliCredentials } from "@azure/ms-rest-nodeauth";
-import { ConnectionProfile, AdminProfile, MSP } from "./Interfaces";
+import { InteractiveLoginOptions, loginWithServicePrincipalSecret, interactiveLogin, AzureCliCredentials } from "@azure/ms-rest-nodeauth";
+import { ServicePrincipalAuthConfig, UserProfile, ABSCARequestProperties, ConnectionProfile, AdminProfile, MSP } from "./Interfaces";
 import { RequestPrepareOptions } from "@azure/ms-rest-js";
 import { TokenClientCredentials } from "@azure/ms-rest-nodeauth/dist/lib/credentials/tokenClientCredentials";
 
@@ -16,7 +17,89 @@ const HyperledgerFabricKind = "HyperledgerFabric";
 export class AzureBlockchainService {
     private credentials?: TokenClientCredentials;
 
-    public async GetAdminProfile(subscriptionId: string, resourceGroup: string, organizationName: string, managementUri?: string): Promise<AdminProfile> {
+    public async GetUserProfile(subscriptionId: string, 
+                                resourceGroup: string, 
+                                organizationName: string,
+                                tenantId: string, 
+                                enrolmentRequest: ABSCARequestProperties,
+                                spnConfig?: ServicePrincipalAuthConfig,
+                                managementUri?: string,
+                                refreshUser?: boolean): Promise<UserProfile> {
+
+        // TODO: Improvise interactive login
+        // All the login attempts need tenantId for now in case of using ms-rest-nodeauth. 
+        // It is known bug in the library: https://github.com/Azure/ms-rest-nodeauth/issues/81
+        
+        await this.getCredentials(subscriptionId, tenantId, spnConfig);
+
+        let memberProperties = await this.getMemberDetails(subscriptionId, resourceGroup, organizationName, managementUri);
+
+        if (!memberProperties) {
+            console.error(chalk.red(`Failed to fetch the member details of provided ABS resource!`));
+            throw new Error("Invalid ABS HLF member information");
+        }
+        
+        let abscaADAppId = memberProperties.properties!.certificateAuthority!.applicationId; 
+        
+        if (!abscaADAppId) {
+            console.error(chalk.red(`The application Id of the member AD App cannot be undefined!`));
+            throw new Error("Invalid ABS HLF member profile");
+        }
+
+        console.log(chalk.yellow(`\nWhile enrolling with user credentials, we need user consent for the AD App to call CA on its behalf.`));
+        console.log(chalk.yellow(`For this purpose, please follow the below steps:`));
+        console.log(chalk.yellow(`\t1. Add a scope definition in your AD App and enable it.`));
+        console.log(chalk.yellow(`\t2. Authorize a client application to access the previously created scope.`));
+        console.log(chalk.yellow(`\t\ta. Here we will whitelist the well known Azure CLI client id: 04b07795-8ddb-461a-bbee-02f9e1bf7b46`));
+        console.log(chalk.yellow(`\t\tb. Whitelisting the Azure CLI client id will allow the azhlfTool to get a token for performing operations with ABS CA!`));
+        console.log(`\nFetching token with ABS CA AD App Id: ${abscaADAppId} as the target audience...`);
+
+        let adAppCrdentials: TokenClientCredentials;
+        if (spnConfig) {
+            // Use SPN based auth if SPN info is provided
+            let options: InteractiveLoginOptions = {
+                tokenAudience: abscaADAppId
+            };
+            adAppCrdentials = await loginWithServicePrincipalSecret(spnConfig.spnClientId, spnConfig.spnClientSecret, tenantId, options);
+        } else if (refreshUser) {
+            // User scenario when user wishes to refresh his credentials due to change in AD app claims
+            adAppCrdentials = await interactiveLogin({ domain: tenantId, tokenAudience: abscaADAppId } as InteractiveLoginOptions);
+        } else {
+            try {
+                // User scenario where user has already logged in through `az login`
+                adAppCrdentials = await AzureCliCredentials.create({ resource: abscaADAppId });  
+            } catch (error) {
+                // User scneario where user has not logged in using `az login` or 
+                // caching is not configurable on this system.
+                console.log(chalk.yellow(`Failed to fetch user credentials from Azure CLI.`));
+                console.log(chalk.yellow(`Caching is not configurable on this system or try "az login" command before running "azhlfTool".`));
+
+                console.log(chalk.green(`\nFalling back to interactive login.`));
+                
+                // fallback to interactive login
+                adAppCrdentials = await interactiveLogin({ domain: tenantId, tokenAudience: abscaADAppId } as InteractiveLoginOptions);
+            }
+        }
+
+        const adAppTokenResponse = await adAppCrdentials.getToken();
+
+        const caEndpoint = memberProperties.properties!.certificateAuthority!.endpoint;
+        const userProfile = await this.getUserProfileFromABSCA(caEndpoint, enrolmentRequest, adAppTokenResponse.accessToken);
+        
+        return userProfile;
+    }
+
+    public async GetAdminProfile(
+        subscriptionId: string, 
+        resourceGroup: string, 
+        organizationName: string, 
+        managementUri?: string, 
+        tenantId?: string, 
+        spnConfig?: ServicePrincipalAuthConfig
+    ): Promise<AdminProfile> {
+
+        await this.getCredentials(subscriptionId, tenantId, spnConfig);
+
         let adminProfile: AdminProfile = (await this.GetProfileFromABS(
             ProfileType.Admin,
             organizationName,
@@ -44,12 +127,17 @@ export class AzureBlockchainService {
         return adminProfile;
     }
 
-    public async GetGatewayProfile(
+    public async GetConnectionProfile(
         subscriptionId: string,
         resourceGroup: string,
         organizationName: string,
-        managementUri?: string
+        managementUri?: string,
+        tenantId?: string,
+        spnConfig?: ServicePrincipalAuthConfig
     ): Promise<ConnectionProfile> {
+
+        await this.getCredentials(subscriptionId, tenantId, spnConfig);
+
         let connectionProfile: ConnectionProfile = (await this.GetProfileFromABS(
             ProfileType.Connection,
             organizationName,
@@ -76,7 +164,16 @@ export class AzureBlockchainService {
         return connectionProfile;
     }
 
-    public async GetMSP(subscriptionId: string, resourceGroup: string, organizationName: string, managementUri?: string): Promise<MSP> {
+    public async GetMSP(
+        subscriptionId: string, 
+        resourceGroup: string, 
+        organizationName: string,
+        managementUri?: string,
+        tenantId?: string,
+        spnConfig?: ServicePrincipalAuthConfig
+    ): Promise<MSP> {
+        await this.getCredentials(subscriptionId, tenantId, spnConfig);
+
         let msp: MSP = (await this.GetProfileFromABS(ProfileType.MSP, organizationName, resourceGroup, subscriptionId, managementUri)) as MSP;
 
         if (!msp || !msp.msp_id) {
@@ -99,13 +196,17 @@ export class AzureBlockchainService {
         subscriptionId: string,
         managementUri?: string
     ): Promise<AdminProfile | ConnectionProfile | MSP | undefined> {
-        const credentials = await this.getCredentials(subscriptionId);
+
+        if (!this.credentials) {
+            console.error(chalk.red(`Could not fetch ${profileType} profile for member: ${organization}`));
+            throw new Error(`Failed to initialize credentials for the user or service principal.`);
+        }
 
         console.log("Retrieving information about marketplace based application...");
 
         // get function application name firstly, there should be only one function app in the resource group.
         const functionAppsFilter = "resourceType eq 'Microsoft.Web/sites'";
-        const client = new ResourceManagementClient(credentials, subscriptionId, { baseUri: managementUri });
+        const client = new ResourceManagementClient(this.credentials, subscriptionId, { baseUri: managementUri });
         const funcApps = await client.resources.listByResourceGroup(resourceGroup, { filter: functionAppsFilter, top: 1 });
         if (!funcApps.length || !funcApps[0].name) {
             throw new Error(
@@ -119,7 +220,7 @@ export class AzureBlockchainService {
         const configManagerFuncName = "ConfigManager";
         const listFunctionKeysUrl = `https://management.azure.com${webAppResourceId}/functions/${configManagerFuncName}/listKeys?api-version=2018-02-01`;
 
-        const token = await credentials.getToken();
+        const token = await this.credentials.getToken();
         const config: AxiosRequestConfig = {
             headers: { Authorization: `Bearer ${token.accessToken}` }
         };
@@ -161,14 +262,18 @@ export class AzureBlockchainService {
         profileType: ProfileType,
         organization: string,
         resourceGroup: string,
-        subscriptionId: string,
+        subscriptionId: string, 
         managementUri?: string
     ): Promise<AdminProfile | ConnectionProfile | MSP | undefined> {
-        const credentials = await this.getCredentials(subscriptionId);
+
+        if (!this.credentials) {
+            console.error(chalk.red(`Could not fetch ${profileType} profile for member: ${organization}`));
+            throw new Error(`Failed to initialize credentials for the user or service principal.`);
+        }
 
         console.log("Trying to find requested resource in Azure Blockchain Service...");
         const blockchainMembersFilter = `resourceType eq 'Microsoft.Blockchain/blockchainMembers' and name eq '${organization}'`;
-        const client = new ResourceManagementClient(credentials, subscriptionId, { baseUri: managementUri });
+        const client = new ResourceManagementClient(this.credentials, subscriptionId, { baseUri: managementUri });
         const blockchainMembers = await client.resources.listByResourceGroup(resourceGroup, { filter: blockchainMembersFilter, top: 1 });
         if (!blockchainMembers.length || blockchainMembers[0].kind != HyperledgerFabricKind) {
             console.log(`Could not find Azure blockchain Hyperledger Fabric member ${organization} in resource group ${resourceGroup}`);
@@ -206,19 +311,119 @@ export class AzureBlockchainService {
         return body;
     }
 
-    private async getCredentials(subscriptionId: string): Promise<TokenClientCredentials> {
+    private async getMemberDetails(subscriptionId: string, resourceGroup: string, organization: string, managementUri?: string): Promise<any> {
+        if (!this.credentials) {
+            console.error(chalk.red(`Could not fetch details for the member: ${organization}`));
+            throw new Error(`Failed to initialize credentials for the user or service principal.`);
+        }
+
+        const baseUri = (managementUri)? managementUri : "https://management.azure.com";
+
+        const agent = new Agent({  
+            rejectUnauthorized: false
+        });
+
+        const tokenResponse = await this.credentials.getToken();
+        
+        const config: AxiosRequestConfig = {
+            headers: { 
+                Authorization: `Bearer ${tokenResponse.accessToken}`
+            },
+            responseType: 'json',
+            httpsAgent: agent
+        };
+
+        const path = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Blockchain/blockchainMembers/${organization}?api-version=2018-06-01-preview`;
+        const url = baseUri + path;
+
+        return await Axios.get(url, config).then((memberDetails: AxiosResponse) => {
+            if (memberDetails.status !== 200) {
+                throw new Error(`Cannot fetch member details. Response: ${memberDetails.statusText}`);
+            }
+    
+            return memberDetails.data;
+        }).catch((err: any) => {
+            if (err.response) {
+                console.log(chalk.red(`Response code from server: ${err.response.status}`));
+                throw new Error(`Cannot fetch member details. Response message: ${err.response.statusText}`);
+            } else if (err.request) {
+                console.log(chalk.red(`Failed to receive response from server. Error encountered: ${err}`));
+                throw new Error(`Can't reach server or unauthorized to access server.`);
+            } else {
+                console.log(chalk.red(`Client side app error encountered.`));
+                throw new Error(`The error object: ${err}`);
+            }
+        });
+    }
+
+    public async getUserProfileFromABSCA(caEndpoint: string, enrolmentRequest: ABSCARequestProperties, accessToken: string): Promise<UserProfile> {  
+        
+        if (!accessToken) { 
+            throw new Error(`Access token cannot empty or null!`);
+        }
+
+        const url = "https://" + caEndpoint + "/ca/certificates/enrollment";
+
+        const agent = new Agent({  
+            rejectUnauthorized: false
+        });
+
+        const config: AxiosRequestConfig = {
+            headers: { 
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            responseType: 'json',
+            httpsAgent: agent
+        };
+
+        const body = {
+            type: enrolmentRequest.role,
+            affiliation: enrolmentRequest.affiliation,
+            attrReqs: enrolmentRequest.attrs
+        }
+
+        return await Axios.post(url, JSON.stringify(body), config).then((enrollmentResponse: AxiosResponse) => {
+            if (enrollmentResponse.status !== 200) {
+                throw new Error(`Can't get enrolment certificate for user. Response: ${enrollmentResponse.statusText}`);
+            }
+
+            const userProfile: UserProfile = {
+                cert: enrollmentResponse.data.certificate,
+                private_key: enrollmentResponse.data.key
+            }
+    
+            return userProfile;
+        }).catch((err: any) => {
+            if (err.response) {
+                console.log(chalk.red(`Response code from server: ${err.response.status}`));
+                throw new Error(`Can't get enrolment certificate for user. Response message: ${err.response.statusText}`);
+            } else if (err.request) {
+                console.log(chalk.red(`Failed to receive response from server. Error encountered: ${err}`));
+                throw new Error(`Can't reach server or unauthorized to access server.`);
+            } else {
+                console.log(chalk.red(`Client side app error encountered.`));
+                throw new Error(`The error object: ${err}`);
+            }
+        });
+    }
+
+    private async getCredentials(subscriptionId: string, tenantId?: string, spnConfig?: ServicePrincipalAuthConfig): Promise<void> {
         if (this.credentials) {
-            return this.credentials;
+            return;
         }
 
         try {
-            // try CLI credentials - will work on Azure Cloud Shell
-            this.credentials = await AzureCliCredentials.create({ subscriptionIdOrName: subscriptionId });
+            if (spnConfig && tenantId) {
+                // If SPN based auth is chosen, then always login using SPN
+                this.credentials = await loginWithServicePrincipalSecret(spnConfig.spnClientId, spnConfig.spnClientSecret, tenantId);
+            } else {
+                // try CLI credentials
+                this.credentials = await AzureCliCredentials.create({ subscriptionIdOrName: subscriptionId });
+            }
         } catch (error) {
-            // fallback to interactive login - a bit annoying because is not cached.
+            // fallback to interactive login - not cached.
             this.credentials = await interactiveLogin();
         }
-
-        return this.credentials;
     }
 }

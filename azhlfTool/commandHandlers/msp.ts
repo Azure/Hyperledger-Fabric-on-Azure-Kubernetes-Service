@@ -2,7 +2,7 @@ import { readFile } from "fs-extra";
 import { MSPManager } from "../common/MSPManager";
 import { AzureBlockchainService } from "../common/AzureBlockchainService";
 import Axios from "axios";
-import { MSP } from "../common/Interfaces";
+import { MSP, ServicePrincipalAuthConfig } from "../common/Interfaces";
 import { AnonymousCredential, ShareClient } from "@azure/storage-file-share";
 import * as chalk from "chalk";
 import { parse as urlParse } from "url";
@@ -17,9 +17,19 @@ export class MspCommandHandler {
         console.log(chalk.green(`${organization} MSP is imported to ${path}.`));
     }
 
-    public async importFromAzure(organization: string, resourceGroup: string, subscriptionId: string, managementUri?: string): Promise<void> {
+    public async importFromAzure(organization: string, resourceGroup: string, subscriptionId: string, managementUri?: string,
+                                    tenantId?: string, spnClientId?: string, spnClientSecret?: string): Promise<void> {
         const azureBlockchainService = new AzureBlockchainService();
-        const msp = await azureBlockchainService.GetMSP(subscriptionId, resourceGroup, organization, managementUri);
+
+        let spnConfig: ServicePrincipalAuthConfig | undefined;
+        if (spnClientId && spnClientSecret) {
+            spnConfig = {
+                spnClientId: spnClientId,
+                spnClientSecret: spnClientSecret
+            }
+        }
+        const msp = await azureBlockchainService.GetMSP(subscriptionId, resourceGroup, organization,
+                                                        managementUri, tenantId, spnConfig);
 
         const path = await new MSPManager().ImportMsp(msp.msp_id, msp.admincerts, msp.cacerts, msp.tlscacerts);
         console.log(chalk.green(`${organization} MSP is imported to ${path}.`));

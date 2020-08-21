@@ -6,6 +6,9 @@ interface Arguments {
     resourceGroup: string;
     subscriptionId: string;
     managementUri?: string;
+    tenantId?: string;
+    spnClientId?: string;
+    spnClientSecret?: string;
 }
 
 export const command = "fromAzure";
@@ -22,11 +25,15 @@ export const builder = (yargs: Argv): Arguments =>
         })
         .option("subscriptionId", { demandOption: true, requiresArg: true, type: "string", description: "The azure subscription identifier.", alias: "s" })
         .option("managementUri", { hidden: true, requiresArg: true, type: "string", description: "The azure management uri.", alias: "m" })
+        .option("tenantId", { hidden: true, requiresArg: true, type: "string", description: "The service principal tenant id.", alias: "t" })
+        .option("spnClientId", { hidden: true, requiresArg: true, type: "string", description: "The service principal client id." })
+        .option("spnClientSecret", { hidden: true, requiresArg: true, type: "string", description: "The service principal client secret." })
         .argv;
 
 export const handler = async (argv: Arguments): Promise<void> => {
     try {
-        await new MspCommandHandler().importFromAzure(argv.organization, argv.resourceGroup, argv.subscriptionId, argv.managementUri);
+        await new MspCommandHandler().importFromAzure(argv.organization, argv.resourceGroup, argv.subscriptionId, argv.managementUri,
+                                                        argv.tenantId, argv.spnClientId, argv.spnClientSecret);
     } catch (error) {
         console.error(error);
     }

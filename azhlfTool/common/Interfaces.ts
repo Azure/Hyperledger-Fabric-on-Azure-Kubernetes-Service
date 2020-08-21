@@ -1,3 +1,13 @@
+export interface ServicePrincipalAuthConfig {
+    spnClientId: string;
+    spnClientSecret: string;
+}
+
+export interface UserProfile {
+    cert: string;
+    private_key: string;
+}
+
 export interface MSP {
     msp_id: string;
     admincerts: string;
@@ -30,6 +40,12 @@ export interface Organization{
     certificateAuthorities?: string[];
     orderers?: string[];
     peers?: string[];
+}
+
+export interface ABSCARequestProperties {
+    role?: string;
+    affiliation?: string;
+    attrs?: string[];
 }
 
 export interface CertificateAuthority {

@@ -4,7 +4,7 @@ import { AzureBlockchainService } from "../common/AzureBlockchainService";
 import { ShareClient, AnonymousCredential } from "@azure/storage-file-share";
 import * as chalk from "chalk";
 import Axios from "axios";
-import { ConnectionProfile } from "../common/Interfaces";
+import { ConnectionProfile, ServicePrincipalAuthConfig } from "../common/Interfaces";
 import { parse as urlParse } from "url";
 
 export class ConnectionProfileCommandHandler {
@@ -18,9 +18,19 @@ export class ConnectionProfileCommandHandler {
         console.log(chalk.green(`Connection profile for ${organization} imported to ${path}.`));
     }
 
-    public async importFromAzure(organization: string, resourceGroup: string, subscriptionId: string, managementUri?: string): Promise<void> {
+    public async importFromAzure(organization: string, resourceGroup: string, subscriptionId: string, managementUri?: string,
+                                    tenantId?: string, spnClientId?: string, spnClientSecret?: string): Promise<void> {
         const azureBlockchainService = new AzureBlockchainService();
-        const gatewayProfile = await azureBlockchainService.GetGatewayProfile(subscriptionId, resourceGroup, organization, managementUri);
+
+        let spnConfig: ServicePrincipalAuthConfig | undefined;
+        if (spnClientId && spnClientSecret) {
+            spnConfig = {
+                spnClientId: spnClientId,
+                spnClientSecret: spnClientSecret
+            }
+        }
+        const gatewayProfile = await azureBlockchainService.GetConnectionProfile(subscriptionId, resourceGroup, organization, 
+                                                                                managementUri, tenantId, spnConfig);
 
         const manager = new ConnectionProfileManager();
         const path = await manager.WriteConnectionProfile(organization, gatewayProfile);

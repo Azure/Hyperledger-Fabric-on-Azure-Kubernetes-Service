@@ -7,6 +7,7 @@ import { GatewayHelper } from "../common/GatewayHelper";
 import * as FabricCAServices from "fabric-ca-client";
 import * as chalk from "chalk";
 import { User} from 'fabric-common';
+import { ABSCARequestProperties, ServicePrincipalAuthConfig } from "../common/Interfaces";
 
 export interface ImportUserData {
     wallet: string;
@@ -50,9 +51,27 @@ export class ImportUserCommandHandler {
         await this.importUserToWallet(userData);
     }
 
-    public async ImportAdminFromAzure(organization: string, resourceGroup: string, subscriptionId: string, managementUri?: string): Promise<void> {
+    public async ImportAdminFromAzure(
+            organization: string, 
+            resourceGroup: string, 
+            subscriptionId: string, 
+            managementUri?: string,
+            tenantId?: string,
+            spnClientId?: string,
+            spnClientSecret?: string
+        ): Promise<void> {
         const azureBlockchainService = new AzureBlockchainService();
-        const adminProfile = await azureBlockchainService.GetAdminProfile(subscriptionId, resourceGroup, organization, managementUri);
+
+        let spnConfig: ServicePrincipalAuthConfig | undefined;
+        if (spnClientId && spnClientSecret) {
+            spnConfig = {
+                spnClientId: spnClientId,
+                spnClientSecret: spnClientSecret
+            }
+        }
+
+        const adminProfile = await azureBlockchainService.GetAdminProfile(subscriptionId, resourceGroup, organization, 
+                                                                            managementUri, tenantId, spnConfig);
 
         const certBase64 = Buffer.from(adminProfile.cert, "base64");
         const keyBase64 = Buffer.from(adminProfile.private_key, "base64");
@@ -97,13 +116,13 @@ export class ImportUserCommandHandler {
         }
     }
 
-    public async EnrollUser(organization: string, userName: string, secret: string): Promise<void> {
+    public async EnrollUserUsingFabricCA(organization: string, userName: string, secret: string): Promise<void> {
         const profile = await new ConnectionProfileManager().getConnectionProfile(organization);
 
         // search for the CA for org.
         const cas = profile.organizations[organization].certificateAuthorities;
         if (!cas || !cas.length) {
-            throw new Error(`No one CA for the org ${organization}`);
+            throw new Error(`No CA found for the organiztion: ${organization}`);
         }
 
         const ca = cas[0];
@@ -139,6 +158,59 @@ export class ImportUserCommandHandler {
             key: result.key.toBytes().toString(),
             tlsCert: tlsResult.certificate,
             tlsKey: tlsResult.key.toBytes().toString()
+        };
+
+        console.log("Importing enrolled identity to wallet...");
+        await this.importUserToWallet(userData);
+    }
+
+    public async EnrollUserUsingABSCA(subscriptionId: string,
+                                        resourceGroup: string,
+                                        organization: string,
+                                        tenantId: string,
+                                        userName: string,
+                                        role?: string,
+                                        affiliation?: string, 
+                                        attrs?: string[], 
+                                        spnClientId?: string,
+                                        spnClientSecret?: string,
+                                        managementUri?: string,
+                                        refreshUser?: boolean) {
+        if (!(role === "admin" || role === "client")) {
+            console.log(chalk.red("Role claim can be only admin or client."));
+            return;
+        }
+
+        const enrolmentRequest: ABSCARequestProperties = {
+            role: (role) ? role : "",
+            affiliation: (affiliation) ? affiliation : "",
+            attrs: (attrs) ? attrs : []
+        }
+
+        let spnConfig: ServicePrincipalAuthConfig | undefined;
+        if (spnClientId && spnClientSecret) {
+            spnConfig = {
+                spnClientId: spnClientId,
+                spnClientSecret: spnClientSecret
+            }
+        }
+
+        const azureBlockchainService = new AzureBlockchainService();
+        let userProfile = await azureBlockchainService.GetUserProfile(subscriptionId, resourceGroup, organization, tenantId,
+                                                    enrolmentRequest, spnConfig, managementUri, refreshUser);
+
+        const certBase64 = Buffer.from(userProfile.cert, "base64");
+        const keyBase64 = Buffer.from(userProfile.private_key, "base64");
+
+        const cert = certBase64.toString("ascii");
+        const key = keyBase64.toString("ascii");
+
+        const userData: ImportUserData = {
+            mspId: organization,
+            wallet: organization,
+            user: userName,
+            cert: cert,
+            key: key
         };
 
         console.log("Importing enrolled identity to wallet...");
