@@ -3,7 +3,7 @@ import * as chalk from "chalk";
 import { Agent } from "https";
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { InteractiveLoginOptions, loginWithServicePrincipalSecret, interactiveLogin, AzureCliCredentials } from "@azure/ms-rest-nodeauth";
-import { ServicePrincipalAuthConfig, UserProfile, ABSCARequestProperties, ConnectionProfile, AdminProfile, MSP } from "./Interfaces";
+import { ServicePrincipalAuthConfig, UserProfile, UserClaims, ConnectionProfile, AdminProfile, MSP } from "./Interfaces";
 import { RequestPrepareOptions } from "@azure/ms-rest-js";
 import { TokenClientCredentials } from "@azure/ms-rest-nodeauth/dist/lib/credentials/tokenClientCredentials";
 
@@ -17,11 +17,20 @@ const HyperledgerFabricKind = "HyperledgerFabric";
 export class AzureBlockchainService {
     private credentials?: TokenClientCredentials;
 
+    private printUserLoginHelp(): void {
+        console.log(chalk.yellow(`\nWhile enrolling with user credentials, we need user consent for the AD App to call CA on its behalf.`));
+        console.log(chalk.yellow(`For this purpose, please follow the below steps:`));
+        console.log(chalk.yellow(`\t1. Add a scope definition in your AD App and enable it.`));
+        console.log(chalk.yellow(`\t2. Authorize a client application to access the previously created scope.`));
+        console.log(chalk.yellow(`\t\ta. Here we will whitelist the well known Azure CLI client id: 04b07795-8ddb-461a-bbee-02f9e1bf7b46`));
+        console.log(chalk.yellow(`\t\tb. Whitelisting the Azure CLI client id will allow the azhlfTool to get a token for performing operations with ABS CA!`));
+    }
+
     public async GetUserProfile(subscriptionId: string, 
                                 resourceGroup: string, 
                                 organizationName: string,
                                 tenantId: string, 
-                                enrolmentRequest: ABSCARequestProperties,
+                                enrolmentRequest: UserClaims,
                                 spnConfig?: ServicePrincipalAuthConfig,
                                 managementUri?: string,
                                 refreshUser?: boolean): Promise<UserProfile> {
@@ -46,28 +55,23 @@ export class AzureBlockchainService {
             throw new Error("Invalid ABS HLF member profile");
         }
 
-        console.log(chalk.yellow(`\nWhile enrolling with user credentials, we need user consent for the AD App to call CA on its behalf.`));
-        console.log(chalk.yellow(`For this purpose, please follow the below steps:`));
-        console.log(chalk.yellow(`\t1. Add a scope definition in your AD App and enable it.`));
-        console.log(chalk.yellow(`\t2. Authorize a client application to access the previously created scope.`));
-        console.log(chalk.yellow(`\t\ta. Here we will whitelist the well known Azure CLI client id: 04b07795-8ddb-461a-bbee-02f9e1bf7b46`));
-        console.log(chalk.yellow(`\t\tb. Whitelisting the Azure CLI client id will allow the azhlfTool to get a token for performing operations with ABS CA!`));
+        this.printUserLoginHelp();
         console.log(`\nFetching token with ABS CA AD App Id: ${abscaADAppId} as the target audience...`);
 
-        let adAppCrdentials: TokenClientCredentials;
+        let adAppCredentials: TokenClientCredentials;
         if (spnConfig) {
             // Use SPN based auth if SPN info is provided
             let options: InteractiveLoginOptions = {
                 tokenAudience: abscaADAppId
             };
-            adAppCrdentials = await loginWithServicePrincipalSecret(spnConfig.spnClientId, spnConfig.spnClientSecret, tenantId, options);
+            adAppCredentials = await loginWithServicePrincipalSecret(spnConfig.spnClientId, spnConfig.spnClientSecret, tenantId, options);
         } else if (refreshUser) {
             // User scenario when user wishes to refresh his credentials due to change in AD app claims
-            adAppCrdentials = await interactiveLogin({ domain: tenantId, tokenAudience: abscaADAppId } as InteractiveLoginOptions);
+            adAppCredentials = await interactiveLogin({ domain: tenantId, tokenAudience: abscaADAppId } as InteractiveLoginOptions);
         } else {
             try {
                 // User scenario where user has already logged in through `az login`
-                adAppCrdentials = await AzureCliCredentials.create({ resource: abscaADAppId });  
+                adAppCredentials = await AzureCliCredentials.create({ resource: abscaADAppId });  
             } catch (error) {
                 // User scneario where user has not logged in using `az login` or 
                 // caching is not configurable on this system.
@@ -77,11 +81,11 @@ export class AzureBlockchainService {
                 console.log(chalk.green(`\nFalling back to interactive login.`));
                 
                 // fallback to interactive login
-                adAppCrdentials = await interactiveLogin({ domain: tenantId, tokenAudience: abscaADAppId } as InteractiveLoginOptions);
+                adAppCredentials = await interactiveLogin({ domain: tenantId, tokenAudience: abscaADAppId } as InteractiveLoginOptions);
             }
         }
 
-        const adAppTokenResponse = await adAppCrdentials.getToken();
+        const adAppTokenResponse = await adAppCredentials.getToken();
 
         const caEndpoint = memberProperties.properties!.certificateAuthority!.endpoint;
         const userProfile = await this.getUserProfileFromABSCA(caEndpoint, enrolmentRequest, adAppTokenResponse.accessToken);
@@ -100,7 +104,7 @@ export class AzureBlockchainService {
 
         await this.getCredentials(subscriptionId, tenantId, spnConfig);
 
-        let adminProfile: AdminProfile = (await this.GetProfileFromABS(
+        let adminProfile: AdminProfile = (await this.GetProfileFromAzureBlockchainService(
             ProfileType.Admin,
             organizationName,
             resourceGroup,
@@ -138,7 +142,7 @@ export class AzureBlockchainService {
 
         await this.getCredentials(subscriptionId, tenantId, spnConfig);
 
-        let connectionProfile: ConnectionProfile = (await this.GetProfileFromABS(
+        let connectionProfile: ConnectionProfile = (await this.GetProfileFromAzureBlockchainService(
             ProfileType.Connection,
             organizationName,
             resourceGroup,
@@ -174,7 +178,7 @@ export class AzureBlockchainService {
     ): Promise<MSP> {
         await this.getCredentials(subscriptionId, tenantId, spnConfig);
 
-        let msp: MSP = (await this.GetProfileFromABS(ProfileType.MSP, organizationName, resourceGroup, subscriptionId, managementUri)) as MSP;
+        let msp: MSP = (await this.GetProfileFromAzureBlockchainService(ProfileType.MSP, organizationName, resourceGroup, subscriptionId, managementUri)) as MSP;
 
         if (!msp || !msp.msp_id) {
             console.log("Fallback to marketplace based application...");
@@ -258,7 +262,7 @@ export class AzureBlockchainService {
         return response.data;
     }
 
-    private async GetProfileFromABS(
+    private async GetProfileFromAzureBlockchainService(
         profileType: ProfileType,
         organization: string,
         resourceGroup: string,
@@ -356,13 +360,13 @@ export class AzureBlockchainService {
         });
     }
 
-    public async getUserProfileFromABSCA(caEndpoint: string, enrolmentRequest: ABSCARequestProperties, accessToken: string): Promise<UserProfile> {  
+    public async getUserProfileFromABSCA(caEndpoint: string, enrolmentRequest: UserClaims, accessToken: string): Promise<UserProfile> {  
         
         if (!accessToken) { 
             throw new Error(`Access token cannot empty or null!`);
         }
 
-        const url = "https://" + caEndpoint + "/ca/certificates/enrollment";
+        const url = caEndpoint + "/certificates/enrollment";
 
         const agent = new Agent({  
             rejectUnauthorized: false

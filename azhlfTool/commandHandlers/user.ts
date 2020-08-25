@@ -7,7 +7,7 @@ import { GatewayHelper } from "../common/GatewayHelper";
 import * as FabricCAServices from "fabric-ca-client";
 import * as chalk from "chalk";
 import { User} from 'fabric-common';
-import { ABSCARequestProperties, ServicePrincipalAuthConfig } from "../common/Interfaces";
+import { UserClaims, ServicePrincipalAuthConfig } from "../common/Interfaces";
 
 export interface ImportUserData {
     wallet: string;
@@ -181,7 +181,7 @@ export class ImportUserCommandHandler {
             return;
         }
 
-        const enrolmentRequest: ABSCARequestProperties = {
+        const enrolmentRequest: UserClaims = {
             role: (role) ? role : "",
             affiliation: (affiliation) ? affiliation : "",
             attrs: (attrs) ? attrs : []

@@ -42,7 +42,7 @@ export interface Organization{
     peers?: string[];
 }
 
-export interface ABSCARequestProperties {
+export interface UserClaims {
     role?: string;
     affiliation?: string;
     attrs?: string[];
