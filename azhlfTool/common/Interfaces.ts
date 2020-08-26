@@ -10,7 +10,6 @@ export interface UserProfile {
 
 export interface MSP {
     msp_id: string;
-    admincerts: string;
     cacerts: string;
     tlscacerts: string;
 }

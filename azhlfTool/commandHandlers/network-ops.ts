@@ -53,7 +53,6 @@ export class NetworkOperations {
             // generate config for the org
             const peerOrgConfig = await ConfigHelper.getOrganizationConfig(
                 peerOrg,
-                [this.FromBase64(peerMsp.admincerts)],
                 [this.FromBase64(peerMsp.cacerts)],
                 [this.FromBase64(peerMsp.tlscacerts)]
             );
@@ -111,7 +110,6 @@ export class NetworkOperations {
         // we are creating application channel with orderer organization in it.
         const ordererOrgConfig = await ConfigHelper.getOrganizationConfig(
             ordererOrg,
-            [this.FromBase64(msp.admincerts)],
             [this.FromBase64(msp.cacerts)],
             [this.FromBase64(msp.tlscacerts)]
         );
@@ -204,7 +202,6 @@ export class NetworkOperations {
 
             const peerOrgConfig = await ConfigHelper.getOrganizationConfig(
                 peerOrg,
-                [this.FromBase64(peerOrgMsp.admincerts)],
                 [this.FromBase64(peerOrgMsp.cacerts)],
                 [this.FromBase64(peerOrgMsp.tlscacerts)]
             );

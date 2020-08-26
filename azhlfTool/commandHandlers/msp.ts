@@ -8,12 +8,11 @@ import * as chalk from "chalk";
 import { parse as urlParse } from "url";
 
 export class MspCommandHandler {
-    public async importFromFiles(organization: string, adminCertFilePath: string, rootCertFilePath: string, tlsRootCertFilePath: string): Promise<void> {
-        const adminCert = Buffer.from(await readFile(adminCertFilePath, "utf8")).toString("base64");
+    public async importFromFiles(organization: string, rootCertFilePath: string, tlsRootCertFilePath: string): Promise<void> {
         const rootCert = Buffer.from(await readFile(rootCertFilePath, "utf8")).toString("base64");
         const tlsRootCert = Buffer.from(await readFile(tlsRootCertFilePath, "utf8")).toString("base64");
 
-        const path = await new MSPManager().ImportMsp(organization, adminCert, rootCert, tlsRootCert);
+        const path = await new MSPManager().ImportMsp(organization, rootCert, tlsRootCert);
         console.log(chalk.green(`${organization} MSP is imported to ${path}.`));
     }
 
@@ -31,7 +30,7 @@ export class MspCommandHandler {
         const msp = await azureBlockchainService.GetMSP(subscriptionId, resourceGroup, organization,
                                                         managementUri, tenantId, spnConfig);
 
-        const path = await new MSPManager().ImportMsp(msp.msp_id, msp.admincerts, msp.cacerts, msp.tlscacerts);
+        const path = await new MSPManager().ImportMsp(msp.msp_id, msp.cacerts, msp.tlscacerts);
         console.log(chalk.green(`${organization} MSP is imported to ${path}.`));
     }
 
@@ -42,11 +41,11 @@ export class MspCommandHandler {
         }
 
         const msp: MSP = response.data;
-        if (!(msp.msp_id && msp.admincerts && msp.cacerts && msp.tlscacerts)) {
-            throw new Error(`Response should contain fields: msp_id, admincerts, cacerts, tlscacerts. But was: ${JSON.stringify(response.data)}`);
+        if (!(msp.msp_id && msp.cacerts && msp.tlscacerts)) {
+            throw new Error(`Response should contain fields: msp_id, cacerts, tlscacerts. But was: ${JSON.stringify(response.data)}`);
         }
 
-        const path = await new MSPManager().ImportMsp(msp.msp_id, msp.admincerts, msp.cacerts, msp.tlscacerts);
+        const path = await new MSPManager().ImportMsp(msp.msp_id, msp.cacerts, msp.tlscacerts);
         console.log(chalk.green(`${msp.msp_id} MSP is imported to ${path}.`));
     }
 
