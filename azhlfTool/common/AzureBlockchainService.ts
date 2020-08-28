@@ -2,7 +2,7 @@ import Axios, { AxiosResponse, AxiosRequestConfig } from "axios";
 import * as chalk from "chalk";
 import { Agent } from "https";
 import { ResourceManagementClient } from "@azure/arm-resources";
-import { InteractiveLoginOptions, loginWithServicePrincipalSecret, interactiveLogin, AzureCliCredentials } from "@azure/ms-rest-nodeauth";
+import { AzureTokenCredentialsOptions, InteractiveLoginOptions, loginWithServicePrincipalSecret, interactiveLogin, AzureCliCredentials } from "@azure/ms-rest-nodeauth";
 import { ServicePrincipalAuthConfig, UserProfile, UserClaims, ConnectionProfile, AdminProfile, MSP } from "./Interfaces";
 import { RequestPrepareOptions } from "@azure/ms-rest-js";
 import { TokenClientCredentials } from "@azure/ms-rest-nodeauth/dist/lib/credentials/tokenClientCredentials";
@@ -55,20 +55,36 @@ export class AzureBlockchainService {
             throw new Error("Invalid ABS HLF member profile");
         }
 
-        this.printUserLoginHelp();
         console.log(`\nFetching token with ABS CA AD App Id: ${abscaADAppId} as the target audience...`);
 
         let adAppCredentials: TokenClientCredentials;
         if (spnConfig) {
-            // Use SPN based auth if SPN info is provided
-            let options: InteractiveLoginOptions = {
-                tokenAudience: abscaADAppId
-            };
-            adAppCredentials = await loginWithServicePrincipalSecret(spnConfig.spnClientId, spnConfig.spnClientSecret, tenantId, options);
+            try {
+                // Use Azure CLI credentials to check if the SPN has already logged in
+                const subscriptionInfo = await AzureCliCredentials.getSubscription(subscriptionId);
+                const userType = subscriptionInfo.user.type;
+                const userName = subscriptionInfo.user.name;
+                if (userType === "servicePrincipal" && userName === spnConfig.spnClientId) {
+                    adAppCredentials = await AzureCliCredentials.create({ resource: abscaADAppId });
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                console.log(chalk.yellow("The given SPN has not logged in using `az login`!"));
+                console.log(chalk.yellow(`Falling back to SPN client id and secret based login.\n`));
+
+                // Use SPN based auth if SPN has not logged in
+                let options: AzureTokenCredentialsOptions = {
+                    tokenAudience: abscaADAppId
+                };
+                adAppCredentials = await loginWithServicePrincipalSecret(spnConfig.spnClientId, spnConfig.spnClientSecret, tenantId, options);
+            }
         } else if (refreshUser) {
+            this.printUserLoginHelp();
             // User scenario when user wishes to refresh his credentials due to change in AD app claims
             adAppCredentials = await interactiveLogin({ domain: tenantId, tokenAudience: abscaADAppId } as InteractiveLoginOptions);
         } else {
+            this.printUserLoginHelp();
             try {
                 // User scenario where user has already logged in through `az login`
                 adAppCredentials = await AzureCliCredentials.create({ resource: abscaADAppId });  
@@ -387,6 +403,8 @@ export class AzureBlockchainService {
             attrReqs: enrolmentRequest.attrs
         }
 
+        console.log(accessToken);
+
         return await Axios.post(url, JSON.stringify(body), config).then((enrollmentResponse: AxiosResponse) => {
             if (enrollmentResponse.status !== 200) {
                 throw new Error(`Can't get enrolment certificate for user. Response: ${enrollmentResponse.statusText}`);
@@ -413,14 +431,31 @@ export class AzureBlockchainService {
     }
 
     private async getCredentials(subscriptionId: string, tenantId?: string, spnConfig?: ServicePrincipalAuthConfig): Promise<void> {
+        console.log(`Fetching access token for the identity to get the HLF member details...\n`);
+
         if (this.credentials) {
             return;
         }
 
         try {
             if (spnConfig && tenantId) {
-                // If SPN based auth is chosen, then always login using SPN
-                this.credentials = await loginWithServicePrincipalSecret(spnConfig.spnClientId, spnConfig.spnClientSecret, tenantId);
+                try {
+                    // Use Azure CLI credentials to check if the SPN has already logged in
+                    const subscriptionInfo = await AzureCliCredentials.getSubscription(subscriptionId);
+                    const userType = subscriptionInfo.user.type;
+                    const userName = subscriptionInfo.user.name;
+                    if (userType === "servicePrincipal" && userName === spnConfig.spnClientId) {
+                        this.credentials = await AzureCliCredentials.create({ subscriptionIdOrName: subscriptionId });
+                    } else {
+                        throw new Error();
+                    }
+                } catch (error) {
+                    console.log(chalk.yellow("The given SPN has not logged in using `az login`!"));
+                    console.log(chalk.yellow(`Falling back to SPN client id and secret based login.\n`));
+
+                    // If SPN based auth is chosen, then always login using SPN
+                    this.credentials = await loginWithServicePrincipalSecret(spnConfig.spnClientId, spnConfig.spnClientSecret, tenantId);
+                }
             } else {
                 // try CLI credentials
                 this.credentials = await AzureCliCredentials.create({ subscriptionIdOrName: subscriptionId });
