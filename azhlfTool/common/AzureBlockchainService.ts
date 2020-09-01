@@ -55,7 +55,7 @@ export class AzureBlockchainService {
             throw new Error("Invalid ABS HLF member profile");
         }
 
-        console.log(`\nFetching token with ABS CA AD App Id: ${abscaADAppId} as the target audience...`);
+        console.log(`\nFetching access token with ABS CA AD App Id: ${abscaADAppId} as the target audience...`);
 
         let adAppCredentials: TokenClientCredentials;
         if (spnConfig) {
@@ -403,8 +403,6 @@ export class AzureBlockchainService {
             attrReqs: enrolmentRequest.attrs
         }
 
-        console.log(accessToken);
-
         return await Axios.post(url, JSON.stringify(body), config).then((enrollmentResponse: AxiosResponse) => {
             if (enrollmentResponse.status !== 200) {
                 throw new Error(`Can't get enrolment certificate for user. Response: ${enrollmentResponse.statusText}`);
@@ -431,7 +429,7 @@ export class AzureBlockchainService {
     }
 
     private async getCredentials(subscriptionId: string, tenantId?: string, spnConfig?: ServicePrincipalAuthConfig): Promise<void> {
-        console.log(`Fetching access token for the identity to get the HLF member details...\n`);
+        console.log(`Fetching access token for the identity to get the HLF member details...`);
 
         if (this.credentials) {
             return;

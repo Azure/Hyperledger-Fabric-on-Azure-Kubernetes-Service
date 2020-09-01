@@ -8,6 +8,7 @@ import * as FabricCAServices from "fabric-ca-client";
 import * as chalk from "chalk";
 import { User} from 'fabric-common';
 import { UserClaims, ServicePrincipalAuthConfig } from "../common/Interfaces";
+import { UserProfileManager } from "../common/UserProfileManager";
 
 export interface ImportUserData {
     wallet: string;
@@ -175,7 +176,8 @@ export class ImportUserCommandHandler {
                                         spnClientId?: string,
                                         spnClientSecret?: string,
                                         managementUri?: string,
-                                        refreshUser?: boolean) {
+                                        refreshUser?: boolean,
+                                        importToJSON?: boolean) {
         if (!(role === "admin" || role === "client")) {
             console.log(chalk.red("Role claim can be only admin or client."));
             return;
@@ -213,7 +215,13 @@ export class ImportUserCommandHandler {
             key: key
         };
 
-        console.log("Importing enrolled identity to wallet...");
+        if (importToJSON) {
+            const manager = new UserProfileManager();
+            const path = await manager.writeUserProfile(organization, userName, userProfile);
+            console.log(chalk.green(`User profile for user: ${userName} imported to path: ${path}.`));
+        }
+
+        console.log("\nImporting enrolled identity to wallet...");
         await this.importUserToWallet(userData);
     }
 
