@@ -60,7 +60,7 @@ for deployment in $deployments; do
         kubectl rollout status -n $ns $resource -w
 
         kubectl patch deployment $deployment -n $ns -p \
-        '{"spec": { "template": { "spec": { "containers": [ { "name":"'$deployment'", "env": [{ "name": "CORE_CHAINCODE_BUILDER", "value": "hyperledger/fabric-ccenv:1.4.4" }, { "name": "CORE_CHAINCODE_GOLANG_RUNTIME", "value": "hyperledger/fabric-baseos:amd64-0.4.18" }, { "name": "CORE_CHAINCODE_NODE_RUNTIME", "value": "hyperledger/fabric-baseimage:amd64-0.4.18" }] } ] } } } }'
+        '{"spec": { "template": { "spec": { "containers": [ { "name":"'$deployment'", "env": [{ "name": "CORE_CHAINCODE_BUILDER", "value": "hlfakstemplateoss.azurecr.io/hyperledger/fabric-ccenv:1.4.4" }, { "name": "CORE_CHAINCODE_GOLANG_RUNTIME", "value": "hlfakstemplateoss.azurecr.io/hyperledger/fabric-baseos:amd64-0.4.18" }, { "name": "CORE_CHAINCODE_NODE_RUNTIME", "value": "hlfakstemplateoss.azurecr.io/hyperledger/fabric-baseimage:amd64-0.4.18" }, { "name": "CORE_CHAINCODE_JAVA_RUNTIME", "value": "" }, { "name": "CORE_CHAINCODE_CAR_RUNTIME", "value": "" }] } ] } } } }'
 
         kubectl scale -n $ns $resource --replicas=1
         kubectl rollout status -n $ns $resource -w
