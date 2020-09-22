@@ -10,7 +10,7 @@
     "@azure/storage-blob": "^12.1.0",
     "axios": "^0.19.2",
     "js-yaml": "^3.13.1",
-    "kubernetes-client": "8.3.4",
+    "kubernetes-client": "^8.3.7",
     "uuid": "^3.4.0"
   },
   "devDependencies": {}

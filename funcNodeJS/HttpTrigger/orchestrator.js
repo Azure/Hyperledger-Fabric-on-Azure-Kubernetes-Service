@@ -73,19 +73,42 @@ module.exports = {
 
         const startDate = new Date(provisioningState.createdAt);
         const elapsedMinutes = (new Date() - startDate) / 1000 / 60;
+        const tailLogLines = 30
+        const toolsNamespace = 'tools';
+        const fabricToolsPod = 'fabric-tools';
+        const { createClient, tryGetResource } = require('./k8s-utils');
+        const kuberConfig = process.env.KubernetesClusterAdminCredential;
+        const client = createClient(kuberConfig);
 
         if (elapsedMinutes > timeoutInMinutes) {
             context.log.error(`${elapsedMinutes} minutes left from initializing deployment. Giving up...`);
-            provisioningState = await setDeployFabricToolsStatus(context, req, {
-                status: 409,
-                provisioningState: 'Failed',
-                error: {
-                    message: `Timeout for waiting of initialization of deployment exceeded. Stage: ${provisioningState.provisioningState}`
-                },
-                additionalInfo: additionalInfo
-            });
+            const hlfFabricToolsPod = await tryGetResource(client.api.v1.namespaces(toolsNamespace).pod, fabricToolsPod, context.log);
+            if (hlfFabricToolsPod) {
+                const hlfFabricToolsLog = await client.api.v1.namespaces(toolsNamespace).pods(fabricToolsPod).log.get({
+                   qs: {
+                     tailLines: tailLogLines
+                   }
+                });
+                provisioningState = await setDeployFabricToolsStatus(context, req, {
+                    status: 409,
+                    provisioningState: 'Failed',
+                    error: {
+                        message: `Timeout for waiting of initialization of deployment exceeded. Stage: ${provisioningState.provisioningState}. Fabric Tools Pod status: ${hlfFabricToolsPod.body.status.phase}.`
+                    },
+                    additionalInfo: `${additionalInfo}. Stage: ${provisioningState.provisioningState}. Fabric Tools Pod status: ${hlfFabricToolsPod.body.status.phase}. Last ${tailLogLines} lines of log: ${JSON.stringify(hlfFabricToolsLog.body)}`
+                });
+            }
+            else {
+                provisioningState = await setDeployFabricToolsStatus(context, req, {
+                    status: 409,
+                    provisioningState: 'Failed',
+                    error: {
+                        message: `Timeout for waiting of initialization of deployment exceeded. Stage: ${provisioningState.provisioningState}`
+                    },
+                    additionalInfo: `${additionalInfo}. Fabric tools pod not found.`
+                });
+            } 
         }
-
         return provisioningState;
     },
 
@@ -160,12 +183,48 @@ async function waitStateChanged(context, req) {
     }
 }
 
+async function checkPodStatus(context, namespace, pod, tailLogLines) {
+    const { createClient, tryGetResource } = require('./k8s-utils');
+    const kuberConfig = process.env.KubernetesClusterAdminCredential;
+    const client = createClient(kuberConfig);
+    const hlfPod = await tryGetResource(client.api.v1.namespaces(namespace).pod, pod, context.log);
+    if (hlfPod && hlfPod.body.status.phase === 'Failed') {
+        const hlfPodLog = await client.api.v1.namespaces(namespace).pods(pod).log.get({
+            qs: {
+                tailLines: tailLogLines
+            }
+        });
+        return {
+            state: {
+                status: 409,
+                provisioningState: 'Failed',
+                error: {
+                    message: `${pod} pod failed.`
+                }
+            },
+            additionalInfo: `${pod} pod failed. Last ${tailLogLines} lines of log: ${JSON.stringify(hlfPodLog.body)}`
+        };
+    }
+    return {
+        state: {
+	    status: 200 
+        }
+    }
+}
+
 async function getStatusFromFabricToolsContainer(context) {
     const { createClient, tryGetResource } = require('./k8s-utils');
     const kuberConfig = process.env.KubernetesClusterAdminCredential
     const client = createClient(kuberConfig);
+    const toolsNamespace = 'tools';
+    const fabricToolspod = 'fabric-tools';
 
-    // retrieve config map content and check status.
+    const fabricToolsPodStatus = await checkPodStatus(context, toolsNamespace, fabricToolspod, 30);
+    if (fabricToolsPodStatus.state.status === 409) {
+      context.log(fabricToolsPodStatus.additionalInfo);	    
+      return fabricToolsPodStatus;
+    }
+        // retrieve config map content and check status.
     const hlfStatusConfigMap = await tryGetResource(client.api.v1.namespaces('metadata').configmap, 'hlf-status', context.log);
 
     if (!hlfStatusConfigMap) {

@@ -73,10 +73,17 @@ export class ChaincodeOperations {
                 if (response instanceof Error || response.response.status != 200) {
                     success = false;
                     console.log(ObjectToString(response));
+                    console.log(chalk.red("Install failed."));
+                    process.exit(1);
                 }
             });
 
-            console.log(success ? chalk.green("Chaincode install successful.") : chalk.red("Install failed."));
+            if (success) {
+                console.log(chalk.green("Chaincode install successful."));    
+            }
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
 
@@ -129,6 +136,7 @@ export class ChaincodeOperations {
             console.log("Checking that chaincode is not instantiated...");
             if (await this.CheckIfChaincodeInstantiated(chaincodeName, chaincodeVersion, channel, peerNode)) {
                 console.log(`Chaincode ${chaincodeName} is already instantiated.`);
+                return;
             }
 
             const txId = peerAdminClient.newTransactionID(true);
@@ -162,7 +170,7 @@ export class ChaincodeOperations {
 
             if (!success) {
                 console.error(chalk.red("Sending instantiate proposal failed."));
-                return;
+                process.exit(1);
             }
 
             const proposal = instantiateProposalResponse[1];
@@ -178,11 +186,15 @@ export class ChaincodeOperations {
             const orderTransactionResponse = await channel.sendTransaction(orderRequest);
 
             if (orderTransactionResponse.status != "SUCCESS") {
-                success = false;
                 console.error(JSON.stringify(orderTransactionResponse));
+                console.log(chalk.red("Instantiation failed."));
+                process.exit(1);
             }
 
-            console.log(success ? chalk.green("Instantiation successful.") : chalk.red("Instantiation failed."));
+            console.log(chalk.green("Instantiation successful."));
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }
@@ -218,6 +230,9 @@ export class ChaincodeOperations {
             } else {
                 console.log(`Got empty response.`);
             }
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }
@@ -234,8 +249,7 @@ export class ChaincodeOperations {
     ): Promise<void> {
         // If endorsingPeers is empty then exit with error
         if (!(Array.isArray(endorsingPeers) && endorsingPeers.length)) {
-            console.error(`Invalid argument. Endorsing peer list should not be empty.`);
-            throw "exit";
+            throw new Error("Invalid argument. Endorsing peer list should not be empty.");
         }
 
         const profile = await new ConnectionProfileManager().getConnectionProfile(peerOrganization);
@@ -260,8 +274,7 @@ export class ChaincodeOperations {
 
             // Throw error if no matching endorsing peers were found
             if (!(Array.isArray(endorsingPeerObjects) && endorsingPeerObjects.length)) {
-                console.error("No peers found with given endorsing peer name(s).");
-                throw "exit";
+                throw new Error("No peers found with given endorsing peer name(s).");
             }
 
             // Use channel object to send query request to target peers
@@ -287,6 +300,9 @@ export class ChaincodeOperations {
                     console.log(`Got empty query result from peer: ${endorsingPeers[i]}`);
                 }
             }
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }

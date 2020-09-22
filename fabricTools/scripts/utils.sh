@@ -177,8 +177,8 @@ function printRaftConsenters() {
      for ((i=1;i<=$NODE_COUNT;i++));
      do
 echo "
-                - Host: orderer${i}
-                  Port: 7050
+                - Host: orderer${i}.$DOMAIN_NAME
+                  Port: 443
                   ClientTLSCert: ${ORG_DIR}/orderers/orderer${i}/tls/server.crt
                   ServerTLSCert: ${ORG_DIR}/orderers/orderer${i}/tls/server.crt"
     done
@@ -320,7 +320,7 @@ echo "
 function waitCAServerUp() {
     maxWaitTime=600  #wait maximum for 600s for CA server to come up
     startTime="$(date -u +%s)"
-    scriptStartTime=$1
+    logStartTime=$1
     while :
     do
         echo "[$(date -u)]: Check CA server health"
@@ -341,7 +341,7 @@ function waitCAServerUp() {
         if [ -z "$result" ];
         then
             if [ $elapsedTime -ge $maxWaitTime ]; then
-                verifyResult 1 "${CAServerName} server: max wait timeout. $elapsedTime seconds elapsed for CA server wait timeout to occur." $scriptStartTime
+                verifyResult 1 "${CAServerName} server: max wait timeout. $elapsedTime seconds elapsed for CA server wait timeout to occur." "$logStartTime"
             else
                 sleep 10
             fi
@@ -420,29 +420,32 @@ function exportSecret() {
 secretName=$1
 sourceNamespace=$2
 targetNamespace=$3
+logStartTime=$4
 
-kubectl -n ${sourceNamespace} get secret ${secretName} -o yaml | sed s/"namespace: ${sourceNamespace}"/"namespace: ${targetNamespace}"/ | kubectl apply -n ${targetNamespace} -f -
+executeKubectlWithRetry "kubectl -n ${sourceNamespace} get secret ${secretName} -o yaml | sed \"s/namespace: ${sourceNamespace}/namespace: ${targetNamespace}/\" | kubectl apply -n ${targetNamespace} -f -" "Failed to create secret '$secretName'!" "$logStartTime" "verifyResult"
 }
 
 logMessage() {
   logCurrentTime="$(date -u +%s)"
   date=$(date -u)  
-  scriptStartTime=$3
-  logElapsedTime=$(($logCurrentTime - $scriptStartTime))	
+  logStartTime=$3
+  logElapsedTime=$(($logCurrentTime - $logStartTime))
   if [ "$1" = "Error" ]; then
-    echo "==== [$date] HLF SETUP ERROR !!! "$2" !!! ERROR CODE: "$res" !!! Time elapsed: $logElapsedTime seconds ==============="
+    echo "============== [$date] HLF SETUP ERROR !!! "$2" !!! ERROR CODE: "$res" !!! Time elapsed: $logElapsedTime seconds ==============="
     echo
   elif [ "$1" = "Warning" ]; then
-    echo "==== [$date] HLF SETUP WARNING !!! "$2" !!! Time elapsed: $logElapsedTime seconds ==============="                                                  
+    echo "==== [$date] HLF SETUP WARNING !!! "$2" !!! Time elapsed: $logElapsedTime seconds ===="                                                  
     echo
   elif [ "$1" = "Info" ]; then
+    echo
     echo "=========== [$date] HLF SETUP INFO !!! $2 !!! Time elapsed: $logElapsedTime seconds ==========="
+    echo
   fi
 }
 
 verifyResult() {
   if [ $1 -ne 0 ]; then
-    logMessage "Error" "$2" $3  
+    logMessage "Error" "$2" "$3"  
     exit 1
   fi
 }
@@ -451,21 +454,22 @@ executeKubectlWithRetry() {
   count=1
   maxRetries=3
   retryInterval=3
-  startScriptTime=$3
+  logStartTime=$3
   while [ $count -le $maxRetries ]
   do	  
-    $1
+    eval $1
     res=$?
     if [ $res -eq 0 ] 
     then
       break
     fi
-    if [ $count -eq $maxRetries ];
-    then
-      verifyResult $res "Attempt $count: $2" $3	    
+    logMessage "Warning" "Attempt $count: $2" "$logStartTime"
+    if [ "$4" = "verifyResult" ] && [ $count -eq $maxRetries ]; then
+      verifyResult $res "$2" "$logStartTime"
     fi
-    logMessage "Warning" "Attempt $count: $2" $3
-    sleep $retryInterval
+    if [  $count -lt $maxRetries ]; then
+      sleep $retryInterval
+    fi
     ((count++))
   done
 }
@@ -474,9 +478,7 @@ updateHlfStatus() {
   logCurrentTime="$(date -u +%s)"	
   newStatus="$1"
   detail="$2"
-  scriptStartTime=$3
-  logElapsedTime=$(($logCurrentTime - $scriptStartTime))
-  kubectl -n ${statusNamespace} create configmap hlf-status --from-literal hlfStatus="$newStatus" --from-literal hlfDescription="$detail Time elapsed: $logElapsedTime seconds" -o yaml --dry-run | kubectl replace -f -
-  res=$?
-  verifyResult $res "Updating 'hlf-status' configmap failed"
+  logStartTime=$3
+  logElapsedTime=$(($logCurrentTime - $logStartTime))
+  executeKubectlWithRetry "kubectl -n ${statusNamespace} create configmap hlf-status --from-literal hlfStatus=\"$newStatus\" --from-literal hlfDescription=\"$detail Time elapsed: $logElapsedTime seconds\" -o yaml --dry-run | kubectl replace -f -" "Updating 'hlf-status' configmap failed" "$logStartTime" "verifyResult" 
 }

@@ -3,7 +3,7 @@ version: '2'
 services:
    fabricCLI:
      container_name: fabricCLI
-     image: hyperledger/fabric-tools:1.4.4
+     image: hyperledger/fabric-tools:1.4.8
      tty: true
      stdin_open: true
      environment:
