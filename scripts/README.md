@@ -1,3 +1,4 @@
+# Steps to patch peer nodes to fix chaincode tag issue
 Please download the peer deployment script using the command:
 curl https://raw.githubusercontent.com/Azure/Hyperledger-Fabric-on-Azure-Kubernetes-Service/master/scripts/patchPeerDeployment.sh -o patchPeerDeployment.sh; chmod 777 patchPeerDeployment.sh
 
