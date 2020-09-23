@@ -6,7 +6,6 @@ import { ConnectionProfileManager } from "../common/ConnectionProfileManager";
 import { GatewayHelper } from "../common/GatewayHelper";
 import * as FabricCAServices from "fabric-ca-client";
 import * as chalk from "chalk";
-import { User} from 'fabric-common';
 import { UserClaims, ServicePrincipalAuthConfig } from "../common/Interfaces";
 import { UserProfileManager } from "../common/UserProfileManager";
 
@@ -100,7 +99,7 @@ export class ImportUserCommandHandler {
 
         // do operations
         try {
-	    const admin = gateway.getCurrentIdentity() as unknown as User;
+	        const admin = gateway.getCurrentIdentity();
             const ca = gateway.getClient().getCertificateAuthority();
             const registerRequest: FabricCAServices.IRegisterRequest = {
                 enrollmentID: userName,
@@ -176,7 +175,6 @@ export class ImportUserCommandHandler {
                                         spnClientId?: string,
                                         spnClientSecret?: string,
                                         managementUri?: string,
-                                        refreshUser?: boolean,
                                         importToJSON?: boolean) {
         if (!(role === "admin" || role === "client")) {
             console.log(chalk.red("Role claim can be only admin or client."));
@@ -199,7 +197,7 @@ export class ImportUserCommandHandler {
 
         const azureBlockchainService = new AzureBlockchainService();
         let userProfile = await azureBlockchainService.GetUserProfile(subscriptionId, resourceGroup, organization, tenantId,
-                                                    enrolmentRequest, spnConfig, managementUri, refreshUser);
+                                                                        enrolmentRequest, userName, spnConfig, managementUri);
 
         const certBase64 = Buffer.from(userProfile.cert, "base64");
         const keyBase64 = Buffer.from(userProfile.private_key, "base64");
@@ -217,8 +215,8 @@ export class ImportUserCommandHandler {
 
         if (importToJSON) {
             const manager = new UserProfileManager();
-            const path = await manager.writeUserProfile(organization, userName, userProfile);
-            console.log(chalk.green(`User profile for user: ${userName} imported to path: ${path}.`));
+            const path = await manager.writeUserProfile(userProfile);
+            console.log(chalk.green(`\nUser profile for user: ${userName} imported to path: ${path}.`));
         }
 
         console.log("\nImporting enrolled identity to wallet...");

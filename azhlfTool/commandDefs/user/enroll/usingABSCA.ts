@@ -13,7 +13,6 @@ interface Arguments {
     spnClientId?: string;
     spnClientSecret?: string;
     managementUri?: string;
-    refreshUser?: boolean;
     importToJSON?: boolean;
 }
 
@@ -32,7 +31,6 @@ export const builder = (yargs: Argv): Arguments =>
         .option("spnClientId", { requiresArg: true, type: "string", description: "The service principal client id for SPN-based authentication." })
         .option("spnClientSecret", { requiresArg: true, type: "string", description: "The service principal client secret for SPN-based authentication." })
         .option("managementUri", { hidden: true, requiresArg: true, type: "string", description: "The azure management uri.", alias: "m" })
-        .option("refreshUser", { type: "boolean", description: "The bool value for refreshing access token for AD App associated with HLF member." })
         .option("importToJSON", { type: "boolean", description: "The bool value for importing user credentials to JSON file along with wallet creation." }).argv;
 
 export const handler = async (argv: Arguments): Promise<void> => {
@@ -40,7 +38,7 @@ export const handler = async (argv: Arguments): Promise<void> => {
         await new ImportUserCommandHandler().EnrollUserUsingABSCA(argv.subscription, argv.resourceGroup, argv.organization, 
                                                                     argv.tenantId, argv.userName, argv.role, argv.affiliation, 
                                                                     argv.attrs, argv.spnClientId, argv.spnClientSecret, 
-                                                                    argv.managementUri, argv.refreshUser, argv.importToJSON);
+                                                                    argv.managementUri, argv.importToJSON);
     } catch (error) {
         console.error(error);
     }

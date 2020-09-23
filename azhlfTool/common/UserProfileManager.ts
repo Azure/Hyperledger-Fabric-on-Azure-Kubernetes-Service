@@ -23,9 +23,9 @@ export class UserProfileManager {
         return userProfile;
     }
 
-    public async writeUserProfile(organization: string, userName: string, userProfile: UserProfile): Promise<string> {
-        await this.ensureDirectoryExists(organization);
-        const userProfilePath = joinPath(this.profilesDirectory, `${organization}`, `${userName}.json`);
+    public async writeUserProfile(userProfile: UserProfile): Promise<string> {
+        await this.ensureDirectoryExists(userProfile.msp_id);
+        const userProfilePath = joinPath(this.profilesDirectory, `${userProfile.msp_id}`, `${userProfile.name}.json`);
         await writeFile(userProfilePath, ObjectToString(userProfile));
         return userProfilePath;
     }

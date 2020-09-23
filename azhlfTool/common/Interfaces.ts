@@ -4,6 +4,8 @@ export interface ServicePrincipalAuthConfig {
 }
 
 export interface UserProfile {
+    name: string;
+    msp_id: string;
     cert: string;
     private_key: string;
 }

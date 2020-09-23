@@ -81,10 +81,13 @@ export class NetworkOperations {
             if (response.status != "SUCCESS") {
                 console.error(chalk.red(`Update system channel failed with status ${response.status}.`));
                 console.error(`Response: ${response.info}`);
-                return;
+                process.exit(1);
             }
 
             console.log(`Successfully added organization ${chalk.green(peerOrg)} to the consortium!`);
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }
@@ -147,10 +150,13 @@ export class NetworkOperations {
             if (response.status != "SUCCESS") {
                 console.error("Update system channel failed with status " + chalk.red(response.status));
                 console.error(`Response: ${response.info}`);
-                return;
+                process.exit(1);
             }
 
-            console.log(chalk.green(chalk.green(`Channel ${channelName} successfully created.`)));
+            console.log(chalk.green(`Channel ${channelName} successfully created.`));
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }
@@ -229,10 +235,13 @@ export class NetworkOperations {
             if (response.status != "SUCCESS") {
                 console.error(`Update ${channelName} channel failed with status ${chalk.red(response.status)}`);
                 console.error(`Response: ${response.info}`);
-                return;
+                process.exit(1);
             }
 
             console.log(chalk.green(`Successfully added organization ${peerOrg} to the channel ${channelName}!`));
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }
@@ -266,6 +275,9 @@ export class NetworkOperations {
             const currentConfig = currentConfigEnvelope.config;
 
             console.log(ObjectToString(currentConfig));
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }
@@ -309,20 +321,18 @@ export class NetworkOperations {
             console.log(`Joining channel ${channelName}...`);
             const joinResponse = await channel.joinChannel(request);
 
-            let success = true;
             // assert response from all peers.
             joinResponse.forEach(response => {
                 if (!response.response || response.response.status != 200) {
-                    success = false;
                     console.error(`${chalk.red("Unsuccess")} response status from peer ${response.peer?.name}. Response: ${response}`);
+                    process.exit(1);
                 }
             });
 
-            console.log(
-                success
-                    ? chalk.green(`Successfully joined all peers of ${peerOrg} to channel ${channelName}.`)
-                    : chalk.red(`Join peers of ${peerOrg} to channel ${channelName} failed.`)
-            );
+            console.log(chalk.green(`Successfully joined all peers of ${peerOrg} to channel ${channelName}.`));
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }
@@ -445,9 +455,9 @@ export class NetworkOperations {
             // send request for update channel
             const response = await peerAdminClient.updateChannel(request);
             if (response.status != "SUCCESS") {
-                console.error(chalk.red(`Update ${channelName} failed with status ${response.status}.`));
+                console.error(chalk.red(`Updating ${channelName} failed with status ${response.status}.`));
                 console.error(`Response: ${response.info}`);
-                return;
+                process.exit(1);
             }
 
             if (anchorPeerNames.length) {
@@ -455,6 +465,9 @@ export class NetworkOperations {
             } else {
                 console.log(`Successfully removed anchor peers for the ${chalk.green(peerOrg)} on channel ${chalk.green(channelName)}!`);
             }
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         } finally {
             gateway.disconnect();
         }
