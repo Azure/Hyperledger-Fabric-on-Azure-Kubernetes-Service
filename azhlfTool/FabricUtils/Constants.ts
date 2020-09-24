@@ -1,3 +1,3 @@
 export const Constants = {
-    binariesVersion: "1.4.8",
+    binariesVersion: "1.4.4",
 };
