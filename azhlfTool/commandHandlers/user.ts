@@ -169,22 +169,30 @@ export class ImportUserCommandHandler {
                                         organization: string,
                                         tenantId: string,
                                         userName: string,
-                                        role?: string,
+                                        type?: string,
                                         affiliation?: string, 
                                         attrs?: string[], 
                                         spnClientId?: string,
                                         spnClientSecret?: string,
                                         managementUri?: string,
                                         importToJSON?: boolean) {
-        if (!(role === "admin" || role === "client")) {
-            console.log(chalk.red("Role claim can be only admin or client."));
-            return;
+
+        let enrolmentRequest: UserClaims = {
+            attrReqs: (attrs) ? attrs : []
+        }
+        
+        if (type) {
+            if (!(type === "admin" || type === "client")) {
+                console.log(chalk.red("Identity type claim if passed, should be either \"admin\" or \"client\"."));
+                console.log(chalk.red("If you wish ABS CA to parse the identity type claim from token, then skip the argument --type to azhlfTool."));
+                return;
+            }
+
+            enrolmentRequest.role = type;
         }
 
-        const enrolmentRequest: UserClaims = {
-            role: (role) ? role : "",
-            affiliation: (affiliation) ? affiliation : "",
-            attrs: (attrs) ? attrs : []
+        if (affiliation) {
+            enrolmentRequest.affiliation = affiliation;
         }
 
         let spnConfig: ServicePrincipalAuthConfig | undefined;

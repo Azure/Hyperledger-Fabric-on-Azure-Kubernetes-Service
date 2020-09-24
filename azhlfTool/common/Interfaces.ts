@@ -46,7 +46,7 @@ export interface Organization{
 export interface UserClaims {
     role?: string;
     affiliation?: string;
-    attrs?: string[];
+    attrReqs?: string[];
 }
 
 export interface CertificateAuthority {

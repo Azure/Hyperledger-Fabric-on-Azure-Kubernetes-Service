@@ -386,13 +386,7 @@ export class AzureBlockchainService {
             httpsAgent: agent
         };
 
-        const body = {
-            type: enrolmentRequest.role,
-            affiliation: enrolmentRequest.affiliation,
-            attrReqs: enrolmentRequest.attrs
-        }
-
-        return await Axios.post(url, JSON.stringify(body), config).then((enrollmentResponse: AxiosResponse) => {
+        return await Axios.post(url, JSON.stringify(enrolmentRequest), config).then((enrollmentResponse: AxiosResponse) => {
             if (enrollmentResponse.status !== 200) {
                 throw new Error(`Can't get enrolment certificate for user. Response: ${enrollmentResponse.statusText}`);
             }
