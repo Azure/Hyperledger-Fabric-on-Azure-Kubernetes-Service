@@ -12,13 +12,12 @@ export class MSPManager {
         this.mspDirectory = joinPath(Constants.StoresPath, "msp");
     }
 
-    public async ImportMsp(organization: string, adminCert: string, rootCert: string, tlsRootCert: string): Promise<string> {
+    public async ImportMsp(organization: string, rootCert: string, tlsRootCert: string): Promise<string> {
         await this.ensureMspDirectoryExists();
         const mspFilePath = joinPath(this.mspDirectory, `${organization}.json`);
         const orgMsp: MSP = {
             // eslint-disable-next-line @typescript-eslint/camelcase
             msp_id: organization,
-            admincerts: adminCert,
             cacerts: rootCert,
             tlscacerts: tlsRootCert
         };

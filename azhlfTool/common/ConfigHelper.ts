@@ -2,13 +2,12 @@ import { readFile } from "fs-extra";
 import { join as joinPath } from "path";
 
 export const ConfigHelper = {
-    async getOrganizationConfig(organizationName: string, adminCerts: string[], rootCerts: string[], tlsRootCerts: string[]): Promise<object> {
+    async getOrganizationConfig(organizationName: string, rootCerts: string[], tlsRootCerts: string[]): Promise<object> {
         // this is test config with common configuration for the organization.
         const orgConfigJson = await readFile(joinPath(__dirname, "..", "..", "configs", "organizationConfig.json"), "utf8");
         const orgJson = orgConfigJson.replace(/!orgName!/g, organizationName);
         const orgConfig = JSON.parse(orgJson);
 
-        orgConfig.values.MSP.value.config.admins = adminCerts.map(cert => Buffer.from(cert).toString("base64"));
         // eslint-disable-next-line @typescript-eslint/camelcase
         orgConfig.values.MSP.value.config.root_certs = rootCerts.map(cert => Buffer.from(cert).toString("base64"));
         // eslint-disable-next-line @typescript-eslint/camelcase

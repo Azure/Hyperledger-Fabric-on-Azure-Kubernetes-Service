@@ -1,6 +1,17 @@
+export interface ServicePrincipalAuthConfig {
+    spnClientId: string;
+    spnClientSecret: string;
+}
+
+export interface UserProfile {
+    name: string;
+    msp_id: string;
+    cert: string;
+    private_key: string;
+}
+
 export interface MSP {
     msp_id: string;
-    admincerts: string;
     cacerts: string;
     tlscacerts: string;
 }
@@ -30,6 +41,12 @@ export interface Organization{
     certificateAuthorities?: string[];
     orderers?: string[];
     peers?: string[];
+}
+
+export interface UserClaims {
+    role?: string;
+    affiliation?: string;
+    attrReqs?: string[];
 }
 
 export interface CertificateAuthority {
