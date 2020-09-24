@@ -46,7 +46,7 @@ spec:
           secretName: pg-ssl-rootcert
      containers:
        - name: ca
-         image: hlfakstemplate.azurecr.io/hyperledger/fabric-ca:1.4.4
+         image: hlfakstemplate.azurecr.io/hyperledger/abs-fabric-ca:1.4.8
          imagePullPolicy: Always
          env: 
          - name:  FABRIC_CA_HOME
@@ -54,7 +54,7 @@ spec:
          ports:
           - containerPort: 7054
           - containerPort: 9443
-         command: ["/bin/bash"]
+         command: ["/bin/sh"]
          args:  ["-c", "rm -rf $FABRIC_CA_HOME;fabric-ca-server start --port 7054"]
          volumeMounts:
            - mountPath: /etc/hyperledger/fabric-ca-server-config/rca.pem

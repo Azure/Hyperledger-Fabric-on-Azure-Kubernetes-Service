@@ -62,7 +62,7 @@ spec:
       - name: fabric-tools-secrets
       containers:
       - name: orderer
-        image: hlfakstemplate.azurecr.io/hyperledger/fabric-orderer:1.4.4
+        image: hlfakstemplate.azurecr.io/hyperledger/abs-fabric-orderer:1.4.8
         command: ["sh", "-c", "orderer"]
         env:
         - name: ORDERER_GENERAL_LEDGERTYPE
