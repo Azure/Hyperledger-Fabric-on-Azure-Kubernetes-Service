@@ -6,9 +6,9 @@ interface ImportUserFromProfileArguments {
     subscriptionId: string;
     organization: string;
     managementUri?: string;
-    tenantId?: string;
     spnClientId?: string;
     spnClientSecret?: string;
+    spnTenantId?: string;
 }
 
 export const command = "import <source>";
@@ -37,16 +37,16 @@ const fromAzureCommand = (yargs: Argv): Argv =>
                 })
                 .option("organization", { demandOption: true, requiresArg: true, type: "string", description: "The organization name.", alias: "o" })
                 .option("managementUri", { hidden: true, requiresArg: true, type: "string", description: "The azure management uri.", alias: "m" })
-                .option("tenantId", { requiresArg: true, type: "string", description: "The service principal tenant id.", alias: "t" })
                 .option("spnClientId", { requiresArg: true, type: "string", description: "The service principal client id." })
                 .option("spnClientSecret", { requiresArg: true, type: "string", description: "The service principal client secret." })
+                .option("spnTenantId", { requiresArg: true, type: "string", description: "The service principal tenant id.", alias: "t" })
                 .argv;
         },
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         async (argv: ImportUserFromProfileArguments): Promise<void> => {
             try {
                 await new ImportUserCommandHandler().ImportAdminFromAzure(argv.organization, argv.resourceGroup, argv.subscriptionId, argv.managementUri,
-                                                                            argv.tenantId, argv.spnClientId, argv.spnClientSecret);
+                                                                            argv.spnClientId, argv.spnClientSecret, argv.spnTenantId);
             } catch (error) {
                 console.error(error);
             }

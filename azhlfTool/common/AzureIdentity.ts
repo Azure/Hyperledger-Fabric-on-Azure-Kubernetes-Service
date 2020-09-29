@@ -5,12 +5,10 @@ import { ServicePrincipalAuthConfig } from "./Interfaces";
 
 export class AzureIdentity {
     public subscriptionId: string;
-    public tenantId?: string;
     public spnConfig?: ServicePrincipalAuthConfig;
 
-    constructor(subscriptionId: string, tenantId?: string, spnConfig?: ServicePrincipalAuthConfig) {
+    constructor(subscriptionId: string, spnConfig?: ServicePrincipalAuthConfig) {
         this.subscriptionId = subscriptionId;
-        this.tenantId = tenantId;
         this.spnConfig = spnConfig;
     }
 
@@ -27,7 +25,7 @@ export class AzureIdentity {
         console.log(`Fetching access token for the identity to get the HLF member details...`);
 
         try {
-            if (this.spnConfig && this.tenantId) {
+            if (this.spnConfig) {
                 try {
                     // Use Azure CLI credentials to check if the SPN has already logged in
                     const subscriptionInfo = await AzureCliCredentials.getSubscription(this.subscriptionId);
@@ -43,7 +41,8 @@ export class AzureIdentity {
                     console.log(chalk.yellow(`Falling back to SPN client id and secret based login.\n`));
 
                     // If SPN based auth is chosen, then always login using SPN
-                    return await loginWithServicePrincipalSecret(this.spnConfig.spnClientId, this.spnConfig.spnClientSecret, this.tenantId);
+                    return await loginWithServicePrincipalSecret(this.spnConfig.spnClientId, this.spnConfig.spnClientSecret, 
+                                                                    this.spnConfig.spnTenantId);
                 }
             } else {
                 // try CLI credentials
@@ -56,7 +55,7 @@ export class AzureIdentity {
     }
 
     public async refreshCredentials(tokenAudience: string): Promise<TokenClientCredentials> {
-        if (this.spnConfig && this.tenantId) {
+        if (this.spnConfig) {
             try {
                 // Use Azure CLI credentials to check if the SPN has already logged in
                 const subscriptionInfo = await AzureCliCredentials.getSubscription(this.subscriptionId);
@@ -75,7 +74,8 @@ export class AzureIdentity {
                 let options: AzureTokenCredentialsOptions = {
                     tokenAudience: tokenAudience
                 };
-                return await loginWithServicePrincipalSecret(this.spnConfig.spnClientId, this.spnConfig.spnClientSecret, this.tenantId, options);
+                return await loginWithServicePrincipalSecret(this.spnConfig.spnClientId, this.spnConfig.spnClientSecret, 
+                                                                this.spnConfig.spnTenantId, options);
             }
         } else {
             this.printUserLoginHelp();
@@ -85,13 +85,13 @@ export class AzureIdentity {
             } catch (error) {
                 // User scneario where user has not logged in using `az login` or 
                 // caching is not configurable on this system.
-                console.log(chalk.yellow(`Failed to fetch user credentials from Azure CLI.`));
+                console.log(chalk.yellow(`\nFailed to fetch user credentials from Azure CLI.`));
                 console.log(chalk.yellow(`Caching is not configurable on this system or try "az login" command before running "azhlfTool".`));
 
                 console.log(chalk.yellow(`\nFalling back to interactive login.`));
                 
                 // fallback to interactive login
-                return await interactiveLogin({ domain: this.tenantId, tokenAudience: tokenAudience } as InteractiveLoginOptions);
+                return await interactiveLogin({ tokenAudience: tokenAudience } as InteractiveLoginOptions);
             }
         }
     }

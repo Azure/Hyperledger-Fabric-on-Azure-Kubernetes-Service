@@ -19,18 +19,19 @@ export class ConnectionProfileCommandHandler {
     }
 
     public async importFromAzure(organization: string, resourceGroup: string, subscriptionId: string, managementUri?: string,
-                                    tenantId?: string, spnClientId?: string, spnClientSecret?: string): Promise<void> {
+                                    spnClientId?: string, spnClientSecret?: string, spnTenantId?: string, ): Promise<void> {
         const azureBlockchainService = new AzureBlockchainService();
 
         let spnConfig: ServicePrincipalAuthConfig | undefined;
-        if (spnClientId && spnClientSecret) {
+        if (spnClientId && spnClientSecret && spnTenantId) {
             spnConfig = {
                 spnClientId: spnClientId,
-                spnClientSecret: spnClientSecret
+                spnClientSecret: spnClientSecret,
+                spnTenantId: spnTenantId
             }
         }
         const gatewayProfile = await azureBlockchainService.GetConnectionProfile(subscriptionId, resourceGroup, organization, 
-                                                                                managementUri, tenantId, spnConfig);
+                                                                                managementUri, spnConfig);
 
         const manager = new ConnectionProfileManager();
         const path = await manager.WriteConnectionProfile(organization, gatewayProfile);

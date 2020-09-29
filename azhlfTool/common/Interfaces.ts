@@ -1,6 +1,7 @@
 export interface ServicePrincipalAuthConfig {
     spnClientId: string;
     spnClientSecret: string;
+    spnTenantId: string; 
 }
 
 export interface UserProfile {

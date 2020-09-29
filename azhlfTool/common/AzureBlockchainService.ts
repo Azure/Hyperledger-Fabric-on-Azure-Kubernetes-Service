@@ -18,17 +18,12 @@ export class AzureBlockchainService {
     public async GetUserProfile(subscriptionId: string, 
                                 resourceGroup: string, 
                                 organizationName: string,
-                                tenantId: string, 
                                 enrolmentRequest: UserClaims,
                                 userName: string,
                                 spnConfig?: ServicePrincipalAuthConfig,
                                 managementUri?: string): Promise<UserProfile> {
-
-        // TODO: Improvise interactive login
-        // All the login attempts need tenantId for now in case of using ms-rest-nodeauth. 
-        // It is known bug in the library: https://github.com/Azure/ms-rest-nodeauth/issues/81
         
-        const azureIdentity = new AzureIdentity(subscriptionId, tenantId, spnConfig);
+        const azureIdentity = new AzureIdentity(subscriptionId, spnConfig);
         const credentials = await azureIdentity.getCredentials();
 
         let memberProperties = await this.getMemberDetails(subscriptionId, resourceGroup, organizationName, credentials, managementUri);
@@ -52,6 +47,11 @@ export class AzureBlockchainService {
             const adAppTokenResponse = await adAppCredentials.getToken();
 
             const caEndpoint = memberProperties.properties!.certificateAuthority!.endpoint;
+            if (!caEndpoint) {
+                console.error(chalk.red(`The ABS CA endpoint cannot be undefined or empty string!`));
+                throw new Error("Invalid ABS CA info in the member profile");
+            }
+
             const userProfile = await this.getUserProfileFromABSCA(organizationName, caEndpoint, userName, 
                                                                     enrolmentRequest, adAppTokenResponse.accessToken);
             
@@ -66,12 +66,11 @@ export class AzureBlockchainService {
         subscriptionId: string, 
         resourceGroup: string, 
         organizationName: string, 
-        managementUri?: string, 
-        tenantId?: string, 
+        managementUri?: string,
         spnConfig?: ServicePrincipalAuthConfig
     ): Promise<AdminProfile> {
 
-        const azureIdentity = new AzureIdentity(subscriptionId, tenantId, spnConfig);
+        const azureIdentity = new AzureIdentity(subscriptionId, spnConfig);
         const credentials = await azureIdentity.getCredentials();
 
         let adminProfile: AdminProfile = (await this.GetProfileFromAzureBlockchainService(
@@ -108,11 +107,10 @@ export class AzureBlockchainService {
         resourceGroup: string,
         organizationName: string,
         managementUri?: string,
-        tenantId?: string,
         spnConfig?: ServicePrincipalAuthConfig
     ): Promise<ConnectionProfile> {
 
-        const azureIdentity = new AzureIdentity(subscriptionId, tenantId, spnConfig);
+        const azureIdentity = new AzureIdentity(subscriptionId, spnConfig);
         const credentials = await azureIdentity.getCredentials();
 
         let connectionProfile: ConnectionProfile = (await this.GetProfileFromAzureBlockchainService(
@@ -148,11 +146,10 @@ export class AzureBlockchainService {
         resourceGroup: string, 
         organizationName: string,
         managementUri?: string,
-        tenantId?: string,
         spnConfig?: ServicePrincipalAuthConfig
     ): Promise<MSP> {
         
-        const azureIdentity = new AzureIdentity(subscriptionId, tenantId, spnConfig);
+        const azureIdentity = new AzureIdentity(subscriptionId, spnConfig);
         const credentials = await azureIdentity.getCredentials();
 
         let msp: MSP = (await this.GetProfileFromAzureBlockchainService(

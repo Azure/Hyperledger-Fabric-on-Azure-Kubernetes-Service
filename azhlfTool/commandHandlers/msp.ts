@@ -17,18 +17,19 @@ export class MspCommandHandler {
     }
 
     public async importFromAzure(organization: string, resourceGroup: string, subscriptionId: string, managementUri?: string,
-                                    tenantId?: string, spnClientId?: string, spnClientSecret?: string): Promise<void> {
+                                    spnClientId?: string, spnClientSecret?: string, spnTenantId?: string): Promise<void> {
         const azureBlockchainService = new AzureBlockchainService();
 
         let spnConfig: ServicePrincipalAuthConfig | undefined;
-        if (spnClientId && spnClientSecret) {
+        if (spnClientId && spnClientSecret && spnTenantId) {
             spnConfig = {
                 spnClientId: spnClientId,
-                spnClientSecret: spnClientSecret
+                spnClientSecret: spnClientSecret,
+                spnTenantId: spnTenantId
             }
         }
         const msp = await azureBlockchainService.GetMSP(subscriptionId, resourceGroup, organization,
-                                                        managementUri, tenantId, spnConfig);
+                                                        managementUri, spnConfig);
 
         const path = await new MSPManager().ImportMsp(msp.msp_id, msp.cacerts, msp.tlscacerts);
         console.log(chalk.green(`${organization} MSP is imported to ${path}.`));
