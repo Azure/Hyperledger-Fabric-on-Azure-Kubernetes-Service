@@ -1,5 +1,6 @@
 orgName=$1
 domainName=$2
+fabricToolsScriptStartTime=$3
 
 . /var/hyperledger/scripts/globals.sh
 . /var/hyperledger/scripts/utils.sh
@@ -18,20 +19,18 @@ openssl ca -create_serial -selfsign -days 3650 -notext -md sha256 -in /tmp/rca/r
 
 # Store private certificates in secrets
 CA_CERT=$(ls /tmp/rca/rca.key)
-kubectl -n ${toolsNamespace} create secret generic hlf-ca-idkey --from-file=rca.key=$CA_CERT
-res=$?
+executeKubectlWithRetry "kubectl -n ${toolsNamespace} create secret generic hlf-ca-idkey --from-file=rca.key=$CA_CERT" "Storing Fabric-CA Root CA key in kubernetes secret failed" "$fabricToolsScriptStartTime" "no-verifyResult"
 if [ $res -ne 0 ]; then
-  logError $res "Storing Fabric-CA Root CA key in kubernetes secret failed"
+  logMessage "Error" "Storing Fabric-CA Root CA key in kubernetes secret failed" "$fabricToolsScriptStartTime"
   rm -rf /tmp/rca/*
   exit 1
 fi
 
 # Store public certificates in secrets
 CA_CERT=$(ls /tmp/rca/rca.pem)
-kubectl -n ${toolsNamespace} create secret generic hlf-ca-idcert --from-file=rca.pem=$CA_CERT
-res=$?
+executeKubectlWithRetry "kubectl -n ${toolsNamespace} create secret generic hlf-ca-idcert --from-file=rca.pem=$CA_CERT" "Storing Fabric-CA Root CA certificate in kubernetes secret failed" "$fabricToolsScriptStartTime" "no-verifyResult"
 if [ $res -ne 0 ]; then
-  logError $res "Storing Fabric-CA Root CA certificate in kubernetes secret failed"
+  logMessage "Error" "Storing Fabric-CA Root CA certificate in kubernetes secret failed" "$fabricToolsScriptStartTime"
   rm -rf /tmp/rca/*
   exit 1
 fi

@@ -39,7 +39,11 @@
     },
     "hlfMemberType": {
       "type": "string",
-      "defaultValue": "empty",
+      "allowedValues": [
+        "orderer",
+        "peer"
+      ],
+      "defaultValue": "orderer",
       "metadata": {
         "description": "The member type for HLF."
       }
@@ -259,6 +263,7 @@
       }
     },
     "workspaceName": {
+      "defaultValue": "[substring(replace(utcNow('O'), ':', '-'), 0, 19)]",
       "type": "string",
       "maxLength": 19,
       "metadata": {
@@ -528,7 +533,7 @@
     {
       "type": "Microsoft.KeyVault/vaults",
       "name": "[variables('keyVaultName')]",
-      "apiVersion": "2018-02-14",
+      "apiVersion": "2019-09-01",
       "location": "[parameters('location')]",
       "properties": {
         "tenantId": "[subscription().tenantId]",
@@ -544,7 +549,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "name": "[concat(variables('keyVaultName'),'/', variables('kubernetesClusterAdminCredential'))]",
-      "apiVersion": "2018-02-14",
+      "apiVersion": "2019-09-01",
       "properties": {
         "value": "[listClusterAdminCredential(resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName')), '2019-08-01').kubeconfigs[0].value]",
         "contentType": "string"
@@ -558,7 +563,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "name": "[concat(variables('keyVaultName'),'/', variables('hlfRootCertPublicKeySecretName'))]",
-      "apiVersion": "2018-02-14",
+      "apiVersion": "2019-09-01",
       "properties": {
         "value": "[parameters('hlfCaRootCertPublicKey')]",
         "contentType": "string"
@@ -571,7 +576,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "name": "[concat(variables('keyVaultName'),'/', variables('hlfRootCertPrivateKeySecretName'))]",
-      "apiVersion": "2018-02-14",
+      "apiVersion": "2019-09-01",
       "properties": {
         "value": "[parameters('hlfCaRootCertPrivateKey')]",
         "contentType": "string"
@@ -584,7 +589,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/accessPolicies",
       "name": "[concat(variables('keyVaultName'), '/add')]",
-      "apiVersion": "2018-02-14",
+      "apiVersion": "2019-09-01",
       "properties": {
         "accessPolicies": [
           {
@@ -744,7 +749,7 @@
       ]
     },
     {
-      "apiVersion": "2018-07-01",
+      "apiVersion": "2019-06-01",
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageName')]",
       "location": "[parameters('location')]",
@@ -796,11 +801,11 @@
             },
             {
               "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2018-07-01').keys[0].value)]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2019-06-01').keys[0].value)]"
             },
             {
               "name": "StorageBlobEndpoint",
-              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageName')), '2018-07-01').primaryEndpoints.blob]"
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageName')), '2019-06-01').primaryEndpoints.blob]"
             },
             {
               "name": "FUNCTIONS_EXTENSION_VERSION",
@@ -808,7 +813,7 @@
             },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2018-07-01').keys[0].value)]"
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2019-06-01').keys[0].value)]"
             },
             {
               "name": "WEBSITE_CONTENTSHARE",
