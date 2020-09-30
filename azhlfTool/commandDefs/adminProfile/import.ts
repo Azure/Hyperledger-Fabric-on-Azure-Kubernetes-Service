@@ -39,7 +39,7 @@ const fromAzureCommand = (yargs: Argv): Argv =>
                 .option("managementUri", { hidden: true, requiresArg: true, type: "string", description: "The azure management uri.", alias: "m" })
                 .option("spnClientId", { requiresArg: true, type: "string", description: "The service principal client id." })
                 .option("spnClientSecret", { requiresArg: true, type: "string", description: "The service principal client secret." })
-                .option("spnTenantId", { requiresArg: true, type: "string", description: "The service principal tenant id.", alias: "t" })
+                .option("spnTenantId", { requiresArg: true, type: "string", description: "The service principal tenant id." })
                 .argv;
         },
         // eslint-disable-next-line @typescript-eslint/no-misused-promises

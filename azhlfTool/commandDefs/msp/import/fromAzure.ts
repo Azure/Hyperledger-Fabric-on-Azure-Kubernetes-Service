@@ -27,7 +27,7 @@ export const builder = (yargs: Argv): Arguments =>
         .option("managementUri", { hidden: true, requiresArg: true, type: "string", description: "The azure management uri.", alias: "m" })
         .option("spnClientId", { hidden: true, requiresArg: true, type: "string", description: "The service principal client id." })
         .option("spnClientSecret", { hidden: true, requiresArg: true, type: "string", description: "The service principal client secret." })
-        .option("spnTenantId", { hidden: true, requiresArg: true, type: "string", description: "The service principal tenant id.", alias: "t" })
+        .option("spnTenantId", { hidden: true, requiresArg: true, type: "string", description: "The service principal tenant id." })
         .argv;
 
 export const handler = async (argv: Arguments): Promise<void> => {
