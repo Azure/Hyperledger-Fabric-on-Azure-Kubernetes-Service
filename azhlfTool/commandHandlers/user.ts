@@ -56,22 +56,23 @@ export class ImportUserCommandHandler {
             resourceGroup: string, 
             subscriptionId: string, 
             managementUri?: string,
-            tenantId?: string,
             spnClientId?: string,
-            spnClientSecret?: string
+            spnClientSecret?: string,
+            spnTenantId?: string,
         ): Promise<void> {
         const azureBlockchainService = new AzureBlockchainService();
 
         let spnConfig: ServicePrincipalAuthConfig | undefined;
-        if (spnClientId && spnClientSecret) {
+        if (spnClientId && spnClientSecret && spnTenantId) {
             spnConfig = {
                 spnClientId: spnClientId,
-                spnClientSecret: spnClientSecret
+                spnClientSecret: spnClientSecret,
+                spnTenantId: spnTenantId
             }
         }
 
         const adminProfile = await azureBlockchainService.GetAdminProfile(subscriptionId, resourceGroup, organization, 
-                                                                            managementUri, tenantId, spnConfig);
+                                                                            managementUri, spnConfig);
 
         const certBase64 = Buffer.from(adminProfile.cert, "base64");
         const keyBase64 = Buffer.from(adminProfile.private_key, "base64");
@@ -167,13 +168,13 @@ export class ImportUserCommandHandler {
     public async EnrollUserUsingABSCA(subscriptionId: string,
                                         resourceGroup: string,
                                         organization: string,
-                                        tenantId: string,
                                         userName: string,
                                         type?: string,
                                         affiliation?: string, 
                                         attrs?: string[], 
                                         spnClientId?: string,
                                         spnClientSecret?: string,
+                                        spnTenantId?: string,
                                         managementUri?: string,
                                         importToJSON?: boolean) {
 
@@ -196,15 +197,16 @@ export class ImportUserCommandHandler {
         }
 
         let spnConfig: ServicePrincipalAuthConfig | undefined;
-        if (spnClientId && spnClientSecret) {
+        if (spnClientId && spnClientSecret && spnTenantId) {
             spnConfig = {
                 spnClientId: spnClientId,
-                spnClientSecret: spnClientSecret
+                spnClientSecret: spnClientSecret,
+                spnTenantId: spnTenantId
             }
         }
 
         const azureBlockchainService = new AzureBlockchainService();
-        let userProfile = await azureBlockchainService.GetUserProfile(subscriptionId, resourceGroup, organization, tenantId,
+        let userProfile = await azureBlockchainService.GetUserProfile(subscriptionId, resourceGroup, organization,
                                                                         enrolmentRequest, userName, spnConfig, managementUri);
 
         const certBase64 = Buffer.from(userProfile.cert, "base64");
