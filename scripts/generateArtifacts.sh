@@ -1,7 +1,6 @@
 artifactsFolder=out
 rootFolder="$(dirname `pwd`)"
 
-
 dockerfileLocation="fabricTools/fabricTools.dockerfile"
 pushd $rootFolder
 docker build . -f ${dockerfileLocation} -t $1 \
@@ -35,7 +34,7 @@ nodeJsArchivePath="${artifactsFolder}/artifacts/funcNodeJS.zip"
 pushd $funcNodeJSFolder
 podJsonLocation=aksManifests/fabricTools/pod.json
 cp $podJsonLocation "${podJsonLocation}_backup"
-sed -i 's|hlfakstemplate.azurecr.io\/fabric-tools:versionplaceholder|'"$1"'|g' $podJsonLocation
+sed -i 's|fabricToolsImageWithTag|'"$1"'|g' $podJsonLocation
 npm ci
 zip -r $nodeJsArchivePath *
 mv "${podJsonLocation}_backup" $podJsonLocation
@@ -46,5 +45,30 @@ cp $createUiDef $artifactsFolder
 cp $mainTemplate $artifactsFolder
 
 pushd $artifactsFolder
+
+if [ ! -d "artifacts" ]
+then
+    echo "artifacts directory not present! Exiting.."
+    exit 1
+fi
+
+if [ ! -d "nestedtemplates" ]
+then
+    echo "nestedtemplates directory not present! Exiting.."
+    exit 1
+fi
+
+if [ ! -f "mainTemplate.json" ]
+then
+    echo "mainTemplate.json is not present! Exiting.."
+    exit 1
+fi
+
+if [ ! -f "createUiDefinition.json" ]
+then
+    echo "createUiDefinition.json is not present! Exiting.."
+    exit 1
+fi
+
 zip -r "${artifactsFolder}/hlf-marketplace.zip" *
 popd

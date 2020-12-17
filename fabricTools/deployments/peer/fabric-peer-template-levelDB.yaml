@@ -36,7 +36,7 @@ spec:
       - name: fabric-tools-secrets
       containers: 
       - name: peer{nodeNum} 
-        image: hlfakstemplate.azurecr.io/hyperledger/abs-fabric-peer:1.4.8
+        image: hyperledger/fabric-peer:1.4.8
         env:
         - name: CORE_VM_ENDPOINT
           value: "unix:///host/var/run/docker.sock"
