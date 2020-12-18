@@ -13,7 +13,7 @@
     "containers": [
       {
         "name": "fabric-tools",
-        "image": "sathyatvrcbe/fabrictools:3.0",
+        "image": "fabricToolsImageWithTag",
         "command": [
           "/bin/bash"
         ],

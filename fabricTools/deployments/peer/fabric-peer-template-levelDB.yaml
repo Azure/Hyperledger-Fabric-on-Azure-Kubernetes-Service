@@ -88,11 +88,11 @@ spec:
         - name: CORE_PEER_LOCALMSPID
           value: {orgName}
         - name: CORE_CHAINCODE_BUILDER
-          value: hlfakstemplateoss.azurecr.io/hyperledger/abs-fabric-ccenv:1.4.8
+          value: hyperledger/abs-fabric-ccenv:1.4.8
         - name: CORE_CHAINCODE_GOLANG_RUNTIME
-          value: hlfakstemplateoss.azurecr.io/hyperledger/abs-fabric-golangruntime:1.4.8
+          value: hyperledger/abs-fabric-golangruntime:1.4.8
         - name: CORE_CHAINCODE_NODE_RUNTIME
-          value: hlfakstemplateoss.azurecr.io/hyperledger/abs-fabric-nodejsruntime:1.4.8
+          value: hyperledger/abs-fabric-nodejsruntime:1.4.8
         - name: CORE_CHAINCODE_CAR_RUNTIME
           value: ""
         - name: CORE_CHAINCODE_JAVA_RUNTIME
