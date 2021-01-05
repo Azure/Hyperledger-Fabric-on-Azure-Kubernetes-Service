@@ -6,6 +6,7 @@ import { ConnectionProfileManager } from "../common/ConnectionProfileManager";
 import { GatewayHelper } from "../common/GatewayHelper";
 import * as FabricCAServices from "fabric-ca-client";
 import * as chalk from "chalk";
+import { AdminProfileManager } from "../common/AdminProfileManager";
 
 export interface ImportUserData {
     wallet: string;
@@ -49,7 +50,13 @@ export class ImportUserCommandHandler {
         await this.importUserToWallet(userData);
     }
 
-    public async ImportAdminFromAzure(organization: string, resourceGroup: string, subscriptionId: string, managementUri?: string): Promise<void> {
+    public async ImportAdminFromAzure(
+        organization: string, 
+        resourceGroup: string, 
+        subscriptionId: string, 
+        importToJSON?: boolean, 
+        managementUri?: string
+    ): Promise<void> {
         const azureBlockchainService = new AzureBlockchainService();
         const adminProfile = await azureBlockchainService.GetAdminProfile(subscriptionId, resourceGroup, organization, managementUri);
 
@@ -67,6 +74,12 @@ export class ImportUserCommandHandler {
             tlsCert: tlsCertBase64.toString("ascii"),
             tlsKey: tlsKeyBase64.toString("ascii")
         };
+
+        if (importToJSON) {
+            const manager = new AdminProfileManager();
+            const path = await manager.writeAdminProfile(adminProfile);
+            console.log(chalk.green(`\nAdmin profile JSON imported to path: ${path}\n`));
+        }
 
         await this.importUserToWallet(userData);
     }
