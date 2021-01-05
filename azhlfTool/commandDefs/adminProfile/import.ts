@@ -5,6 +5,7 @@ interface ImportUserFromProfileArguments {
     resourceGroup: string;
     subscriptionId: string;
     organization: string;
+    importToJSON?: boolean;
     managementUri?: string;
 }
 
@@ -33,12 +34,13 @@ const fromAzureCommand = (yargs: Argv): Argv =>
                     alias: "s",
                 })
                 .option("organization", { demandOption: true, requiresArg: true, type: "string", description: "The organization name.", alias: "o" })
+                .option("importToJSON", { type: "boolean", description: "The flag for importing admin credentials to JSON file along with wallet creation." })
                 .option("managementUri", { hidden: true, requiresArg: true, type: "string", description: "The azure management uri.", alias: "m" }).argv;
         },
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         async (argv: ImportUserFromProfileArguments): Promise<void> => {
             try {
-                await new ImportUserCommandHandler().ImportAdminFromAzure(argv.organization, argv.resourceGroup, argv.subscriptionId, argv.managementUri);
+                await new ImportUserCommandHandler().ImportAdminFromAzure(argv.organization, argv.resourceGroup, argv.subscriptionId, argv.importToJSON, argv.managementUri);
             } catch (error) {
                 console.error(error);
             }
