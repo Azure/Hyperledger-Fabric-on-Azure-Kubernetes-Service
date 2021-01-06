@@ -13,7 +13,7 @@
     "containers": [
       {
         "name": "fabric-tools",
-        "image": "hlfakstemplate.azurecr.io/fabric-tools:versionplaceholder",
+        "image": "fabricToolsImageWithTag",
         "command": [
           "/bin/bash"
         ],
