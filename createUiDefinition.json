@@ -272,20 +272,20 @@
                 "constraints": {
                   "allowedValues": [
                     {
-                      "label": "default",
-                      "value": "default"
+                      "label": "1.18.14 (default)",
+                      "value": "1.18.14"
                     },
                     {
-                      "label": "1.16.9",
-                      "value": "1.16.9"
+                      "label": "1.18.10",
+                      "value": "1.18.10"
                     },
                     {
-                      "label": "1.15.11",
-                      "value": "1.15.11"
+                      "label": "1.17.16",
+                      "value": "1.17.16"
                     },
                     {
-                      "label": "1.14.8",
-                      "value": "1.14.8"
+                      "label": "1.17.13",
+                      "value": "1.17.13"
                     }
                   ]
                 }
@@ -588,7 +588,7 @@
       "hlfCaRootCertPrivateKey": "[steps('hlfConfig').hlfCaRootCertPrivateKey.output]",
       "enableHttpApplicationRouting": "[steps('kubernetesConfig').kubeNetworking.publicIP]",
       "clusterName": "[steps('kubernetesConfig').clusterDetails.clusterName]",
-      "kubernetesVersion": "[replace(steps('kubernetesConfig').clusterDetails.kubernetesVersion, 'default', '')]",
+      "kubernetesVersion": "[steps('kubernetesConfig').clusterDetails.kubernetesVersion]",
       "dnsPrefix": "[steps('kubernetesConfig').clusterDetails.dnsPrefix]",
       "agentVMSize": "[steps('kubernetesConfig').clusterDetails.agentVMSize]",
       "agentCount": "[int(steps('kubernetesConfig').clusterDetails.agentCount)]",
