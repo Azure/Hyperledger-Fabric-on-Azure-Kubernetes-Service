@@ -75,7 +75,9 @@ RUN wget https://aka.ms/downloadazcopy-v10-linux \
 
 # Download jq tool
 RUN apk update \
-    && apk add --no-cache jq openssl coreutils git
+    && apk add --no-cache jq openssl coreutils
+
+RUN apk add --no-cache git
 
 # Copy AKS HLF artifacts
 COPY ./fabricTools/deployments /var/hyperledger/deployments
