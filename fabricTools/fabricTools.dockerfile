@@ -77,6 +77,8 @@ RUN wget https://aka.ms/downloadazcopy-v10-linux \
 RUN apk update \
     && apk add --no-cache jq openssl coreutils
 
+RUN apk add git
+
 # Copy AKS HLF artifacts
 COPY ./fabricTools/deployments /var/hyperledger/deployments
 COPY ./fabricTools/scripts /var/hyperledger/scripts
